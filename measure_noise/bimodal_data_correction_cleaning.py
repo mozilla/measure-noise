@@ -47,6 +47,7 @@ bimodal = [
     2247
 ]
 
+bimodal_np = np.asarray(bimodal)
 
 # Find the peaks
 bimodal_hist, edges = np.histogram(bimodal, bins=50)
@@ -169,4 +170,52 @@ plt.plot(newedges[:-1], newhist)
 plt.title("Corrected bi-modal values as histogram")
 plt.xlabel("%-Change values")
 plt.ylabel("Count")
+
+# Plot stddevs and means for uncorrected vs corrected
+plt.figure(); plt.subplot(1,2,1);
+plt.scatter(list(range(len(bimodal_np))), bimodal_np)
+for start, end in hists:
+    plt.axhline(edges[start], color='r')
+    plt.axhline(edges[end], color='r')
+plt.title("Original data")
+plt.xlabel("Time")
+plt.ylabel("Data units (a.u.)")
+
+means = np.zeros(len(bimodal_np))
+ranges = np.zeros(len(bimodal_np))
+stddevs = np.zeros(len(bimodal_np))
+binsize = 15
+for i in range(int(len(bimodal_np)/binsize)+1):
+    if i*binsize >= len(bimodal_np):
+        continue
+    arang = (i*binsize, (i*binsize)+binsize)
+    pts = bimodal_np[arang[0]:arang[1]]
+    means[arang[0]:arang[1]] = np.mean(pts)
+    stddevs[arang[0]:arang[1]] = np.std(pts)
+
+plt.plot(means, color='black')
+plt.fill_between(np.arange(len(bimodal_np)), means-stddevs, means+stddevs, alpha=0.3)
+
+plt.subplot(1,2,2);
+plt.scatter(list(range(len(bimodal_np))), bimodal_corrected)
+plt.title("Bimodal corrected data")
+plt.xlabel("Time")
+plt.ylabel("%-Change from mean")
+
+means = np.zeros(len(bimodal_corrected))
+ranges = np.zeros(len(bimodal_corrected))
+stddevs = np.zeros(len(bimodal_corrected))
+binsize = 15
+for i in range(int(len(bimodal_corrected)/binsize)+1):
+    if i*binsize >= len(bimodal_corrected):
+        continue
+    arang = (i*binsize, (i*binsize)+binsize)
+    pts = bimodal_corrected[arang[0]:arang[1]]
+    means[arang[0]:arang[1]] = np.mean(pts)
+    stddevs[arang[0]:arang[1]] = np.std(pts)
+
+plt.plot(means, color='black')
+plt.fill_between(np.arange(len(bimodal_corrected)), means-stddevs, means+stddevs, alpha=0.3)
+
+
 
