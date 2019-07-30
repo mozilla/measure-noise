@@ -30,7 +30,6 @@ class BasicTests(FuzzyTestCase):
 
         Log.note("samples = {{output}}\nrandom = {{random}}", output=m, random=r_moments)
 
-    # @skip("still coding")
     def test_bimodal(self):
         data = DATA.bimodal.right(120)
         plot(data)

@@ -5,3 +5,4 @@ mo-files
 mo-logs
 scipy
 plotly
+matplotlib
