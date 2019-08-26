@@ -3,7 +3,5 @@ mo-dots
 pyLibrary
 mo-files
 mo-logs
-numpy
-scipy
 plotly
 matplotlib

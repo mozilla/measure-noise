@@ -18,7 +18,6 @@ class TestPerfAlert(TestCase):
             454, 751.5, 715, 731.5, 443, 425, 729.5, 709, 739.5, 733.5, 791, 720.5,
             21038, 21046  # THESE POINTS DO NOT HELP WITH DETECTION
         ]
-        Log.note("{{data|json}}", data=data)
         plot(data)
         result, changes = perfherder_alert(data)
         alert = any(changes)
