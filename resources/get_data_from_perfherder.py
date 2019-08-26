@@ -8,7 +8,7 @@ http.DEBUG = True
 
 
 http.default_headers = {
-    "User-Agent": "Python requests",
+    "User-Agent": "Python requests (https://github.com/mozilla/measure-noise)",
     "Referer": "https://github.com/mozilla/measure-noise",
 }
 
@@ -48,7 +48,7 @@ download_perfherder(
     "Bimodal, imbalance in probability", "mozilla-central", 1937036, 1, 10
 )
 download_perfherder(
-    "Example of bad noise before, good noise after", "mozilla-central", 1978280, 1, 10
+    "Example of normal noise before, good noise after", "mozilla-central", 1978280, 1, 10
 )
 download_perfherder("Bad", "mozilla-central", 1982073, 1, 10)
 download_perfherder(
