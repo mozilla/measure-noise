@@ -1,11 +1,9 @@
 from math import sqrt
 
-from mo_logs import Log
-from numpy import mean, var, log
+from numpy import log, mean, stack, var
 from scipy.stats import kurtosis, skew
-from numpy import stack
 
-DEBUG = True
+DEBUG = False
 PROBLEM_THRESHOLD = 3.0  # NUMBER OF STANDRAD DEVIATIONS BEFORE A PROBLEM IS HIGHLIGHTED
 
 
@@ -61,6 +59,7 @@ def deviance(samples):
     kurt_normalized = kurt / kurt_stddev
 
     if DEBUG:
+        from mo_logs import Log
         Log.note(
             "skew={{skew}}  kurt={{kurt}}", skew=skew_normalized, kurt=kurt_normalized
         )

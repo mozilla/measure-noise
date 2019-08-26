@@ -14,7 +14,7 @@ class TestBasic(FuzzyTestCase):
         ]
         plot(data)
         description, scale = deviance(data)
-        self.assertEqual(description, "OK")
+        self.assertEqual(description, "OK")  # SINGLE-POINT ERRORS WILL NOT BE DETECTED
 
         data = [
             454, 751.5, 715, 731.5, 443, 425, 729.5, 709, 739.5, 733.5,
