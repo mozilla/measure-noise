@@ -1,6 +1,6 @@
 import plotly.graph_objects as go
 
-from vendor.perfalert import RevisionDatum, detect_changes
+from perfalert import RevisionDatum, detect_changes
 
 DEBUG = True
 SHOW_CHARTS = False

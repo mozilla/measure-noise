@@ -1,3 +1,6 @@
+from __future__ import division, unicode_literals
+
+
 from math import sqrt
 
 from numpy import log, mean, stack, var
