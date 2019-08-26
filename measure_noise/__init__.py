@@ -9,16 +9,9 @@ DEBUG = True
 PROBLEM_THRESHOLD = 3.0  # NUMBER OF STANDRAD DEVIATIONS BEFORE A PROBLEM IS HIGHLIGHTED
 
 
-
 def moments(samples):
     data = stack(samples)
-    return (
-        len(data),
-        mean(data),
-        sqrt(var(data)),
-        skew(data),
-        kurtosis(data)
-    )
+    return (len(data), mean(data), sqrt(var(data)), skew(data), kurtosis(data))
 
 
 def identity(v):
@@ -27,18 +20,21 @@ def identity(v):
 
 def deviance(samples):
     """
+    Measure the deviant noise: The amount the `samples` deviate from a normal distribution
+
     :param samples: Some list of floats with uni-variate data
-    :return: (description, score) pair describing the problem
+    :return: (description, score) pair describing the problem, and how bad it is
 
     Description is one of:
     SKEWED - samples are heavily to one side of the mean
-    MODAL - few samples are near the mean (probably bimodal)
     OUTLIERS - there are more outliers than would be expected from normal distribution
-
+    MODAL - few samples are near the mean (probably bimodal)
+    N/A - not enough data to even guess
+    OK - no egregious deviation from normal
     """
 
     if len(samples) < 6:
-        return "OK", 0
+        return "N/A", 0
 
     if all(v > 0 for v in samples):
         # Use log(): We assume this is log-normal data
@@ -46,20 +42,28 @@ def deviance(samples):
     else:
         transform = identity
 
-    samples = sorted(samples)[1: -1]
+    samples = sorted(samples)[1:-1]
     corrected_samples = transform(samples)
     (count, mean, stddev, skew, kurt) = moments(corrected_samples)
 
     # https://en.wikipedia.org/wiki/D%27Agostino%27s_K-squared_test
 
     skew_stddev = sqrt(6 * (count - 2) / ((count + 1) * (count + 3)))
-    kurt_stddev = sqrt(24 * count * (count - 2) * (count - 3) / ((count + 1) * (count + 1) * (count + 3) * (count + 5)))
+    kurt_stddev = sqrt(
+        24
+        * count
+        * (count - 2)
+        * (count - 3)
+        / ((count + 1) * (count + 1) * (count + 3) * (count + 5))
+    )
 
     skew_normalized = skew / skew_stddev
     kurt_normalized = kurt / kurt_stddev
 
     if DEBUG:
-        Log.note("skew={{skew}}  kurt={{kurt}}", skew=skew_normalized, kurt=kurt_normalized)
+        Log.note(
+            "skew={{skew}}  kurt={{kurt}}", skew=skew_normalized, kurt=kurt_normalized
+        )
 
     if abs(skew_normalized) > PROBLEM_THRESHOLD:
         return "SKEWED", skew_normalized
