@@ -1,10 +1,10 @@
-from mo_testing.fuzzytestcase import FuzzyTestCase
+from unittest import TestCase
 
 from measure_noise import deviance
 from tests import plot
 
 
-class TestBasic(FuzzyTestCase):
+class TestBasic(TestCase):
 
     def test_distracting_point(self):
         data = [

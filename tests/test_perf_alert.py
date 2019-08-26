@@ -1,7 +1,5 @@
 from unittest import TestCase
 
-from mo_logs import Log
-
 from tests import perfherder_alert, plot
 
 
