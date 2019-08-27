@@ -10,7 +10,7 @@ Measure how our data deviates from normal distribution
 
 ## Install
 
-    pip install measure-noisze
+    pip install measure-noise
 
 ## Development
 
