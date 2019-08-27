@@ -1,72 +1,78 @@
-from jx_python import jx
-from jx_python.containers.list_usingPythonList import ListContainer
-from mo_future import first
-from mo_logs import Log
-from pyLibrary.env import http
-
-http.DEBUG = True
+from __future__ import division, unicode_literals
 
 
-http.default_headers = {
-    "User-Agent": "Python requests",
-    "Referer": "https://github.com/mozilla/measure-noise",
-}
+from math import sqrt
+
+from numpy import log, mean, stack, var
+from scipy.stats import kurtosis, skew
+
+DEBUG = False
+PROBLEM_THRESHOLD = 3.0  # NUMBER OF STANDRAD DEVIATIONS BEFORE A PROBLEM IS HIGHLIGHTED
 
 
-def download_perfherder(desc, repo, id, dummy, framework):
-    sig_result = http.get_json(
-        "https://treeherder.mozilla.org/api/project/"
-        + repo
-        + "/performance/signatures/?format=json&framework="
-        + str(framework)
-        + "&id="
-        + str(id)
+def moments(samples):
+    data = stack(samples)
+    return (len(data), mean(data), sqrt(var(data)), skew(data), kurtosis(data))
+
+
+def identity(v):
+    return v
+
+
+def deviance(samples):
+    """
+    Measure the deviant noise: The amount the `samples` deviate from a normal distribution
+
+    :param samples: Some list of floats with uni-variate data
+    :return: (description, score) pair describing the problem, and how bad it is
+
+    Description is one of:
+    SKEWED - samples are heavily to one side of the mean
+    OUTLIERS - there are more outliers than would be expected from normal distribution
+    MODAL - few samples are near the mean (probably bimodal)
+    N/A - not enough data to even guess
+    OK - no egregious deviation from normal
+    """
+
+    if len(samples) < 6:
+        return "N/A", 0
+
+    if all(v > 0 for v in samples):
+        # Use log(): We assume this is log-normal data
+        transform = log
+    else:
+        transform = identity
+
+    samples = sorted(samples)[1:-1]
+    corrected_samples = transform(samples)
+    (count, mean, stddev, skew, kurt) = moments(corrected_samples)
+
+    # https://en.wikipedia.org/wiki/D%27Agostino%27s_K-squared_test
+
+    skew_stddev = sqrt(6 * (count - 2) / ((count + 1) * (count + 3)))
+    kurt_stddev = sqrt(
+        24
+        * count
+        * (count - 2)
+        * (count - 3)
+        / ((count + 1) * (count + 1) * (count + 3) * (count + 5))
     )
 
-    signature = first(sig_result.keys())
-    data_result = http.get_json(
-        "https://treeherder.mozilla.org/api/project/"
-        + repo
-        + "/performance/data/?signatures="
-        + signature
-    )
+    skew_normalized = skew / skew_stddev
+    kurt_normalized = kurt / kurt_stddev
 
-    Log.note(
-        "{{result|json}}",
-        result={
-            "name": desc,
-            "data": jx.run({
-                "from": ListContainer("data", data_result[signature]),
-                "sort": "push_timestamp",
-                "select": "value"
-            }).data
-        },
-    )
+    if DEBUG:
+        from mo_logs import Log
+        Log.note(
+            "skew={{skew}}  kurt={{kurt}}", skew=skew_normalized, kurt=kurt_normalized
+        )
 
+    if abs(skew_normalized) > PROBLEM_THRESHOLD:
+        return "SKEWED", skew_normalized
+    if abs(kurt_normalized) > PROBLEM_THRESHOLD:
+        if kurt < 0:
+            return "MODAL", kurt_normalized
+        else:
+            return "OUTLIERS", kurt_normalized
 
-download_perfherder(
-    "Bimodal, imbalance in probability", "mozilla-central", 1937036, 1, 10
-)
-download_perfherder(
-    "Example of bad noise before, good noise after", "mozilla-central", 1978280, 1, 10
-)
-download_perfherder("Bad", "mozilla-central", 1982073, 1, 10)
-download_perfherder(
-    "Breaks normality assumption (?multi-modal?)", "mozilla-central", 2092476, 1, 10
-)
-download_perfherder(
-    'One bad point should not be considered "noise" (mean 3K)',
-    "mozilla-central",
-    2007143,
-    1,
-    10,
-)
-download_perfherder(
-    "Mean=4K, about the same variance as above, is noise measure in absolute, or relative?",
-    "mozilla-central",
-    2007068,
-    1,
-    10,
-)
-download_perfherder("Are waves in the data noise?", "mozilla-central", 2008829, 1, 10)
-download_perfherder("not-quite-balanced bimodal", "mozilla-central", 2007043, 1, 10)
+    return "OK", 0
