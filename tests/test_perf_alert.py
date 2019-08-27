@@ -1,5 +1,7 @@
+import numpy
 from unittest import TestCase
 
+from measure_noise import deviance
 from tests import perfherder_alert, plot
 
 
@@ -20,3 +22,22 @@ class TestPerfAlert(TestCase):
         result, changes = perfherder_alert(data)
         alert = any(changes)
         self.assertFalse(alert)  # The code should find this problem, but the outlier is causing a problem
+
+
+    def test_alert(self):
+        num_pre = 25
+        num_post = 12
+        num_resume = 2
+        pre_samples = numpy.random.normal(loc=10, size=num_pre)
+        post_samples = numpy.random.normal(loc=100, size=num_post - num_resume)
+        resume_samples = numpy.random.normal(loc=10, size=num_resume)
+
+        samples = list(pre_samples) + list(post_samples) + list(resume_samples)
+        plot(samples)
+
+        result, changes = perfherder_alert(samples)
+        alert = any(changes)
+        self.assertTrue(alert)
+
+        desc, score = deviance(list(post_samples) + list(resume_samples))
+        self.assertEqual("SKEWED", desc)
