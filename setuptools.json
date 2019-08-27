@@ -1,0 +1,19 @@
+{
+    "author": "Kyle Lahnakoski",
+    "author_email": "kyle@lahnakoski.com",
+    "classifiers": [
+        "Development Status :: 4 - Beta",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"
+    ],
+    "description": "Measure deviant noise",
+    "include_package_data": true,
+    "install_requires": [],
+    "license": "MPL 2.0",
+    "long_description_content_type": "text/markdown",
+    "name": "measure-noise",
+    "packages": ["measure-noise"],
+    "url": "https://github.com/mozilla/measure-noise",
+    "version": "1.0"
+}
