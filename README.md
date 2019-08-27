@@ -10,7 +10,25 @@ Measure how our data deviates from normal distribution
 
 ## Install
 
-    pip install measure-noisze
+    pip install measure-noise
+
+## Usage
+
+The `deviance()` method will return a `(description, score)` pair describing how the samples deviate from a normal distribution, and by how much.  This is intended to screen samples for use in the t-test, and other statistics, that assume a normal distribution.
+
+* `SKEWED` - samples are heavily to one side of the mean
+* `OUTLIERS` - there are more outliers than would be expected from normal distribution
+* `MODAL` - few samples are near the mean (probably bimodal)
+* `OK` - no egregious deviation from normal
+* `N/A` - not enough data to make a conclusion (aka `OK`)
+
+#### Example
+
+    from measure_noise import deviance
+
+	>>> desc, score = deviance([1,2,3,4,5,6,7,8])
+    >>> desc
+    'OK'
 
 ## Development
 
