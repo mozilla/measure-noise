@@ -2,12 +2,11 @@ from __future__ import unicode_literals
 
 from unittest import TestCase
 
+from jx_python import jx
 from mo_logs import Log
 import numpy
 
-from jx_python import jx
 from measure_noise import deviance
-from tests import plot
 
 
 class TestNormal(TestCase):
@@ -19,6 +18,8 @@ class TestNormal(TestCase):
             samples = numpy.random.normal(size=20)
             desc, score = deviance(samples)
             results.append(desc)
+
+        self.assertEqual(list(jx.groupby(["ok", "not ok"])), [("ok", ["ok"]), ("not ok", ["not ok"])], "expecting version >=2.53")
 
         # normals ar OK
         for desc, n in jx.groupby(results):
