@@ -19,7 +19,7 @@ class TestNormal(TestCase):
             desc, score = deviance(samples)
             results.append(desc)
 
-        self.assertEqual(list(jx.groupby(["ok", "not ok"])), [("ok", ["ok"]), ("not ok", ["not ok"])], "expecting version >=2.53")
+        self.assertEqual(list(jx.groupby(["ok", "not ok"])), [("not ok", ["not ok"]), ("ok", ["ok"])], "expecting version >=2.53")
 
         # normals ar OK
         for desc, n in jx.groupby(results):
