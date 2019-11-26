@@ -14,22 +14,23 @@ WORKLIST = SQL("""
         s.framework_id=10 and 
         (s.test IS NULL or s.test='' or s.test=s.suite) 
     GROUP BY s.id 
+    LIMIT 20
 """)
 
 def get_worklist(db_config):
-    db = MySQL(**db_config)
+    db = MySQL(db_config)
     with db:
         return db.query(text(WORKLIST))
 
 
 def get_signature(db_config, signature_id):
-    db = MySQL(**db_config)
+    db = MySQL(db_config)
     with db:
         return db.query(expand_template(signature_sql, quote_list(listwrap(signature_id))))
 
 
 def get_dataum(db_config, signature_id):
-    db = MySQL(**db_config)
+    db = MySQL(db_config)
     with db:
         return db.query(expand_template(datum_sql, quote_list(listwrap(signature_id))))
 
@@ -83,7 +84,7 @@ datum_sql = """
             t3.id AS `job.id`,
             t3.guid AS `job.guid`,
             p.revision AS `push.revision`,
-            p.time AS `push.time`,
+            UNIX_TIMESTAMP(p.time) AS `push.time`,
             r.name AS `push.repository`,
             s.created AS `summary.created`,
             s.status AS `summary.status`,

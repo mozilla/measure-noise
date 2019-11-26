@@ -3,3 +3,4 @@
 .svn
 __pycache__
 vendor
+/resources/pem/treeherder-prod-ro.cd3i3txkp6c6.us-east-1.rds.amazonaws.com

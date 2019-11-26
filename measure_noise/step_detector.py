@@ -6,6 +6,9 @@ from mo_collections import not_right, not_left
 from mo_dots import Data
 from mo_math import ceiling
 
+SHOW_CHARTS = False
+
+
 MIN_POINTS = 6
 MAX_POINTS = 24
 
@@ -17,8 +20,10 @@ TOP_EDGES = 0.05  # NUMBER OF POINTS TO INVESTIGATE EDGES (PERCENT)
 P_THRESHOLD = pow(10, -4)
 JITTER = 20  # NUMBER OF SAMPLES (+/-) TO LOOK FOR BETTER EDGES
 
+ABS=1
 
-def find_segments(values):
+
+def find_segments(values, diff_type, diff_threshold):
     values = np.array(values)
     logs = np.log(values)
     # EDGE DETECTION BASED ON VALUE
@@ -35,7 +40,7 @@ def find_segments(values):
 
     # EDGE DETECTION BASED ON RANK
     ranks = rankdata(values)
-    plot(ranks, title="RANKS")
+    SHOW_CHARTS and plot(ranks, title="RANKS")
     # ADD SOME EXTRA DATA TO EDGES TO MINIMIZE EDGE ARTIFACTS
     # CONVERT RANK TO PERCENTILE
     extra = (
@@ -58,14 +63,23 @@ def find_segments(values):
 
     # CAN WE DO BETTER?
     for i, _ in enumerate(segments[:-2]):
-        score, best_mid = jitter_MWU(
-            logs, segments[i], segments[i + 1], segments[i + 2]
-        )
-        if score.pvalue < P_THRESHOLD:
-            segments[i + 1] = best_mid
-        else:
+        s, m , e = segments[i], segments[i + 1], segments[i + 2]
+        score, best_mid = jitter_MWU(logs, s, m, e)
+        if score.pvalue > P_THRESHOLD:
             # NO EVIDENCE OF DIFFERENCE, COLLAPSE SEGMENT
             segments[i + 1] = segments[i]
+            continue
+        elif diff_type == ABS and np.abs(np.median(values[s:best_mid]) - np.median(values[best_mid:e])) < diff_threshold:
+            # NO EVIDENCE OF DIFFERENCE, COLLAPSE SEGMENT
+            segments[i + 1] = segments[i]
+            continue
+        elif np.abs(np.median(logs[s: best_mid]) - np.median(logs[best_mid: e])) < diff_threshold / 100:
+            # NO EVIDENCE OF DIFFERENCE, COLLAPSE SEGMENT
+            segments[i + 1] = segments[i]
+            continue
+
+        # LOOKS GOOD
+        segments[i + 1] = best_mid
 
     segments = list(sorted(set(segments)))
     return segments

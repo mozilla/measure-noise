@@ -33,7 +33,6 @@ def assign_colors(values, segments, title):
     )
     fig.update_layout(title=title)
     fig.show()
-    sleep(10)
 
 
 COLORS = [
