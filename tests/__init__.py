@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 from perfalert import RevisionDatum, detect_changes
 
 DEBUG = True
-SHOW_CHARTS = False
+SHOW_CHARTS =True
 
 
 def plot(data):
