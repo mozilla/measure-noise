@@ -12,6 +12,8 @@ from mo_files import File
 from mo_future import text
 from mo_logs import Log
 from mo_math import mod, ceiling
+from mo_math.stats import median
+from mo_times import MONTH, Date
 
 FILENAME = "signatures"
 DATA = File("../MySQL-to-S3")
@@ -30,26 +32,33 @@ def plot(data, title=None):
 # LOAD SOME RECENT RAPTOR MEASURES
 def iterate_signatures():
     for file in DATA.children:
-        if file.name.startswith(FILENAME + ".1705100"):
-            Log.note("process {{file}}", file=file.abspath)
-            process(file)
-
-        # if file.name.startswith(FILENAME):
+        # if file.name.startswith(FILENAME + ".1705100"):
         #     Log.note("process {{file}}", file=file.abspath)
         #     process(file)
+
+        if file.name.startswith(FILENAME):
+            Log.note("process {{file}}", file=file.abspath)
+            process(file)
 
 
 def process(file):
     sig = file.read_json()
 
-    values = jx.run(
-        {
-            "from": ListContainer("sig", sig.performance_datum),
-            "select": "value",
-            "where": {"gte": {"push.time": {"date": "today-3month"}}},
-            "sort": "push_time",
-        }
-    ).data
+    min_date = (Date.today() - 3 * MONTH).unix
+    values = [
+        median(rows.value)
+        for t, rows in jx.groupby(sig.performance_datum, "push.time")
+        if t["push\\.time"] > min_date
+    ]
+    # values = jx.run(
+    #     {
+    #         "from": ListContainer("sig", sig.performance_datum),
+    #         "select": {"aggregate":"median", "value":"value"},
+    #         "where": {"gte": {"push.time": {"date": "today-3month"}}},
+    #         "edges": "push.time",
+    #         "sort": "push.time",
+    #     }
+    # ).data
 
     segments = find_segments(values)
     assign_colors(
