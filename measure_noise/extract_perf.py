@@ -10,6 +10,7 @@ WORKLIST = SQL("""
     FROM performance_datum d 
     LEFT JOIN performance_signature s on s.id = d.signature_id
     WHERE 
+        s.id=1704787 AND
         d.push_timestamp > DATE_ADD(DATE(NOW()), INTERVAL -1 DAY) and 
         s.framework_id=10 and 
         (s.test IS NULL or s.test='' or s.test=s.suite) 

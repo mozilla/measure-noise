@@ -9,7 +9,7 @@ from mo_files import File
 from mo_future import text, first
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
-from mo_times import MONTH, Date
+from mo_times import MONTH, Date, Timer
 
 FILENAME = "signatures"
 DATA = File("../MySQL-to-S3")
@@ -29,7 +29,8 @@ def process(sig_id):
     ])
 
     values = pushes.value
-    segments = find_segments(values, sig.alert_change_type, sig.alert_threshold)
+    with Timer("find segments"):
+        segments = find_segments(values, sig.alert_change_type, sig.alert_threshold)
 
     # CHECK FOR OLD ALERTS
     if len(segments)>1:
