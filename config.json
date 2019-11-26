@@ -1,0 +1,22 @@
+{
+    "database": {
+        "schema": "treeherder",
+        "username": "activedata2",
+        "ssl": {
+            "ca": "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
+        },
+        "$ref": "~/private.json#treeherder"
+    },
+    "constants": {
+        "pyLibrary.env.http.default_headers": {"Referer": "MySQL-to-S3"},
+        "mysql_to_s3.snowflake_schema.DEBUG": true
+    },
+    "debug": {
+        "trace": true,
+        "cprofile": false
+    }
+
+
+}
+
+
