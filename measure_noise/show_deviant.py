@@ -1,15 +1,17 @@
+from time import sleep
+
 import numpy as np
 import plotly.graph_objects as go
 from scipy.stats import stats, rankdata
-from time import sleep
 
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
+from mo_collections import not_right, not_left
 from mo_dots import Data
 from mo_files import File
 from mo_future import text
 from mo_logs import Log
-from mo_math import mod
+from mo_math import mod, ceiling
 
 FILENAME = "signatures"
 DATA = File("../MySQL-to-S3")
@@ -28,7 +30,7 @@ def plot(data, title=None):
 # LOAD SOME RECENT RAPTOR MEASURES
 def iterate_signatures():
     for file in DATA.children:
-        if file.name.startswith(FILENAME + ".1704647"):
+        if file.name.startswith(FILENAME + ".1705100"):
             Log.note("process {{file}}", file=file.abspath)
             process(file)
 
@@ -63,6 +65,7 @@ scale = 5
 operator_radius = 30
 forward = np.exp(-np.arange(operator_radius) / scale) / scale
 edge_operator = np.concatenate((-forward[::-1], forward))  # APPROX sign(x)*exp(abs(x))
+TOP_EDGES = 0.05  # NUMBER OF POINTS TO INVESTIGATE EDGES (PERCENT)
 COLORS = [
     "red",
     "green",
@@ -78,7 +81,6 @@ COLORS = [
 
 P_THRESHOLD = pow(10, -4)
 JITTER = 20  # NUMBER OF SAMPLES (+/-) TO LOOK FOR BETTER EDGES
-
 
 def find_segments(values):
     values = np.array(values)
@@ -111,7 +113,8 @@ def find_segments(values):
         - 1
     ) / len(values)
     edge_detection = np.convolve(extra, edge_operator, mode="valid")
-    top_edges = np.argsort(-np.abs(edge_detection))[:20]
+    plot(edge_detection, title="EDGES")
+    top_edges = np.argsort(-np.abs(edge_detection))[:ceiling(len(values)*TOP_EDGES)]
 
     # SORT THE EDGE DETECTION
     segments = np.array([0, len(values)] + list(top_edges))
@@ -142,29 +145,47 @@ def assign_colors(values, segments, title):
             colors[i] = COLORS[mod(next_color, len(COLORS))]
         next_color += 1
 
-    if next_color > 0:
-        fig = go.Figure(
-            data=go.Scatter(
-                x=tuple(range(0, len(values))),
-                y=values,
-                mode="markers",
-                marker=dict(color=colors),
-            )
+    fig = go.Figure(
+        data=go.Scatter(
+            x=tuple(range(0, len(values))),
+            y=values,
+            mode="markers",
+            marker=dict(color=colors),
         )
-        fig.update_layout(title=title)
-        fig.show()
-        sleep(10)
+    )
+    fig.update_layout(title=title)
+    fig.show()
+    sleep(10)
+
+
+def cumvar(values):
+    m = np.arange(len(values))
+    count = m + 1
+    cummean = np.cumsum(values) / count
+    cumvar  = ((values - cummean) ** 2) / m
+    return cumvar
+
+
+def cumSS(values):
+    """
+    RETURN CUMULATIVE SUM-OF-SQUARES
+    :param values:
+    """
+    m = np.arange(len(values))
+    count = m + 1
+    cummean = np.cumsum(values) / count
+    return ((values - cummean) ** 2)
 
 
 def jitter_MWU(values, start, mid, end):
-    mids = np.array(
-        range(
-            min(mid, max(start + MIN_POINTS, mid - JITTER)),
-            max(mid, min(mid + JITTER, end - MIN_POINTS)),
-        )
-    )
-    if len(mids) == 0:
+    # ADD SOME CONSTRAINTS TO THE RANGE OF VALUES TESTED
+    m_start = min(mid, max(start + MIN_POINTS, mid - JITTER))
+    m_end = max(mid, min(mid + JITTER, end - MIN_POINTS))
+    if m_start == m_end:
         return Data(pvalue=1), mid
+    mids = np.array(range(m_start, m_end))
+
+    # MWU SCORES
     m_score = np.array(
         [
             stats.mannwhitneyu(
@@ -176,20 +197,17 @@ def jitter_MWU(values, start, mid, end):
             for m in mids
         ]
     )
-    t_score = np.array(
-        [stats.ttest_ind(values[start:m], values[m:end], equal_var=False) for m in mids]
-    )
 
-    # MULTIPLY P_VALUES
-    pvalue = np.sqrt(m_score[:, 1] * t_score[:, 1])
-    # plot(np.log(pvalue))
-    if mid == 199:
-        plot(np.log(pvalue))
-        plot(np.log(m_score[:, 1]))
-        plot(np.log(t_score[:, 1]))
+    # TOTAL SUM-OF-SQUARES
+    v_prefix = not_right(not_left(cumSS(values[start:m_end]), m_start - start - 1), 1)
+    v_suffix = not_right(cumSS(values[m_start:end][::-1])[::-1], end - m_end)
+    v_score = v_prefix + v_suffix
 
-    bests = np.argsort(pvalue)
-    return Data(pvalue=pvalue[bests[0]]), mids[bests[0]]
+    # PICK LOWEST
+    pvalue = np.sqrt(m_score[:, 1] * v_score)  # GOEMEAN OF SCORES
+    best = np.argmin(pvalue)
+
+    return Data(pvalue=m_score[best, 1]), mids[best]
 
 
 # MEASURE DEVIANCE (HOW TO KNOW THE START POINT?)
