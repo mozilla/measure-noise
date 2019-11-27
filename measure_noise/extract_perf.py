@@ -10,12 +10,15 @@ WORKLIST = SQL("""
     FROM performance_datum d 
     LEFT JOIN performance_signature s on s.id = d.signature_id
     WHERE 
-        s.id=1704787 AND
-        d.push_timestamp > DATE_ADD(DATE(NOW()), INTERVAL -1 DAY) and 
-        s.framework_id=10 and 
-        (s.test IS NULL or s.test='' or s.test=s.suite) 
+        s.id=2052644
+        -- d.push_timestamp > DATE_ADD(DATE(NOW()), INTERVAL -1 DAY) and 
+        -- s.framework_id=10 and 
+        -- (s.test IS NULL or s.test='' or s.test=s.suite) and
+        -- s.repository_id <> 4  and -- try
+        -- s.repository_id <> 1  -- mozilla-central
     GROUP BY s.id 
-    LIMIT 20
+    ORDER BY s.last_updated DESC
+    LIMIT 100
 """)
 
 def get_worklist(db_config):
