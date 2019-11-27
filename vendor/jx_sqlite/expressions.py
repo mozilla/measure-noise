@@ -568,7 +568,13 @@ class EqOp(EqOp_):
         if not acc:
             return FALSE.to_sql(schema)
         else:
-            return wrap([{"name": ".", "sql": {"b": SQL_OR.join(acc)}}])
+            return SQLScript(
+                expr=SQL_OR.join(acc),
+                frum=self,
+                data_type=BOOLEAN,
+                miss=FALSE,
+                schema=schema
+            )
 
     @simplified
     def partial_eval(self):

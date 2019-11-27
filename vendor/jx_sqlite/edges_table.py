@@ -41,7 +41,7 @@ class EdgesTable(SetOpTable):
         base_table, path = schema.snowflake.fact_name, schema.nested_path
         nest_to_alias = {
             nested_path: quote_column("__" + unichr(ord('a') + i) + "__")
-            for i, (nested_path, sub_table) in enumerate(self.sf.tables)
+            for i, (nested_path, sub_table) in enumerate(self.snowflake.tables)
         }
 
         tables = []
@@ -69,7 +69,7 @@ class EdgesTable(SetOpTable):
         orderby = []
         domains = []
 
-        select_clause = [SQL_ONE + EXISTS_COLUMN] + [quote_column(c.es_column) for c in self.sf.columns]
+        select_clause = [SQL_ONE + EXISTS_COLUMN] + [quote_column(c.es_column) for c in self.snowflake.columns]
 
         for edge_index, query_edge in enumerate(query.edges):
             edge_alias = "e" + text(edge_index)
@@ -218,13 +218,13 @@ class EdgesTable(SetOpTable):
             elif len(edge_names) > 1:
                 domain_names = ["d" + text(edge_index) + "c" + text(i) for i, _ in enumerate(edge_names)]
                 query_edge.allowNulls = False
-                domain_columns = [c for c in self.sf.columns if quote_column(c.es_column) in vals]
+                domain_columns = [c for c in self.snowflake.columns if quote_column(c.es_column) in vals]
                 if not domain_columns:
                     domain_nested_path = "."
                     Log.note("expecting a known column")
                 else:
                     domain_nested_path = domain_columns[0].nested_path
-                domain_table = quote_column(concat_field(self.sf.fact_name, domain_nested_path[0]))
+                domain_table = quote_column(concat_field(self.snowflake.fact_name, domain_nested_path[0]))
                 limit = mo_math.min(query.limit, query_edge.domain.limit)
                 domain = (
                     SQL_SELECT + sql_list(sql_alias(g, n) for n, g in zip(domain_names, vals)) +
@@ -248,13 +248,13 @@ class EdgesTable(SetOpTable):
                 null_on_clause = None
             elif query_edge.domain.type == "default" or isinstance(query_edge.domain, DefaultDomain):
                 domain_names = ["d" + text(edge_index) + "c" + text(i) for i, _ in enumerate(edge_names)]
-                domain_columns = [c for c in self.sf.columns if quote_column(c.es_column) in vals]
+                domain_columns = [c for c in self.snowflake.columns if quote_column(c.es_column) in vals]
                 if not domain_columns:
                     domain_nested_path = "."
                     Log.note("expecting a known column")
                 else:
                     domain_nested_path = domain_columns[0].nested_path
-                domain_table = quote_column(concat_field(self.sf.fact_name, domain_nested_path[0]))
+                domain_table = quote_column(concat_field(self.snowflake.fact_name, domain_nested_path[0]))
                 limit = mo_math.min(query.limit, query_edge.domain.limit)
                 domain = (
                     SQL_SELECT + sql_list(sql_alias(g, n) for n, g in zip(domain_names, vals)) +
@@ -369,7 +369,7 @@ class EdgesTable(SetOpTable):
                 )
             elif s.aggregate == "count" and (not query.edges and not query.groupby):
                 value = s.value.var
-                columns = [c.es_column for c in self.sf.columns if untyped_column(c.es_column)[0] == value]
+                columns = [c.es_column for c in self.snowflake.columns if untyped_column(c.es_column)[0] == value]
                 sql = SQL("+").join(sql_count(quote_column(col)) for col in columns)
                 column_number = len(outer_selects)
                 outer_selects.append(sql_alias(sql, _make_column_name(column_number)))

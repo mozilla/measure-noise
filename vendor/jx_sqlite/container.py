@@ -145,8 +145,7 @@ class Container(object):
             with self.db.transaction() as t:
                 t.execute(command)
 
-        snowflake = Snowflake(fact_name, self.ns)
-        return Facts(self, snowflake)
+        return QueryTable(fact_name, self)
 
     def get_table(self, table_name):
         return QueryTable(table_name, self)

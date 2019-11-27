@@ -29,7 +29,7 @@ class BaseTable(jx_base.Table):
         self.container = container
 
     @property
-    def sf(self):
+    def snowflake(self):
         return self.schema.snowflake
 
     @property

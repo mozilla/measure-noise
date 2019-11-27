@@ -26,7 +26,7 @@ from mo_logs import Log
 from mo_times import Date
 from pyLibrary.sql import SQL_AND, SQL_FROM, SQL_INNER_JOIN, SQL_NULL, SQL_SELECT, SQL_TRUE, SQL_UNION_ALL, SQL_WHERE, \
     sql_iso, sql_list, SQL_VALUES, SQL_INSERT, ConcatSQL, SQL_EQ, SQL_UPDATE, SQL_SET, SQL_ONE, SQL_DELETE
-from pyLibrary.sql.sqlite import json_type_to_sqlite_type, quote_column, quote_value
+from pyLibrary.sql.sqlite import json_type_to_sqlite_type, quote_column, quote_value, sql_alias
 
 
 class InsertTable(BaseTable):
@@ -197,12 +197,12 @@ class InsertTable(BaseTable):
         self.db.execute(command)
 
     def upsert(self, doc, where):
-        old_docs = self.filter(where)
+        old_docs = self.where(where)
         if len(old_docs) == 0:
-            self.insert(doc)
+            self.insert([doc])
         else:
             self.delete(where)
-            self.insert(doc)
+            self.insert([doc])
 
     def flatten_many(self, docs, path="."):
         """
@@ -275,7 +275,7 @@ class InsertTable(BaseTable):
                     # WHAT IS THE NESTING LEVEL FOR THIS PATH?
                     deeper_nested_path = "."
                     for path in snowflake.query_paths:
-                        if startswith_field(cname, path) and len(deeper_nested_path) < len(path):
+                        if startswith_field(cname, path[0]) and len(deeper_nested_path) < len(path):
                             deeper_nested_path = path
 
                     c = Column(

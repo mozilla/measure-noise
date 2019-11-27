@@ -27,7 +27,7 @@ class GroupbyTable(EdgesTable):
         base_table = schema.snowflake.fact_name
         path = schema.nested_path
         # base_table, path = tail_field(frum)
-        # schema = self.sf.tables[path].schema
+        # schema = self.snowflake.tables[path].schema
         index_to_column = {}
         nest_to_alias = {
             nested_path: "__" + unichr(ord('a') + i) + "__"

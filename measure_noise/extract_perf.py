@@ -10,8 +10,8 @@ WORKLIST = SQL("""
     FROM performance_datum d 
     LEFT JOIN performance_signature s on s.id = d.signature_id
     WHERE 
-        s.id=2052644
-        -- d.push_timestamp > DATE_ADD(DATE(NOW()), INTERVAL -1 DAY) and 
+        s.id=2153028
+        -- d.push_timestamp > DATE_ADD(DATE(NOW()), INTERVAL -30 DAY) and 
         -- s.framework_id=10 and 
         -- (s.test IS NULL or s.test='' or s.test=s.suite) and
         -- s.repository_id <> 4  and -- try
@@ -61,8 +61,8 @@ signature_sql = """
         t1.test_public_name ,
         t1.tags,
         t3.option_collection_hash as `option_collection.hash`,
-        t4.name AS performance_framework, 
-        t5.platform AS machine_platform, 
+        t4.name AS framework, 
+        t5.platform AS platform, 
         t6.name AS `repository.name`
     FROM
         performance_signature t1

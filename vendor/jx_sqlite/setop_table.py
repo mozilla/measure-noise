@@ -61,7 +61,7 @@ class SetOpTable(InsertTable):
         sql_selects = []  # EVERY SELECT CLAUSE (NOT TO BE USED ON ALL TABLES, OF COURSE)
         nest_to_alias = {
             nested_path[0]: "__" + unichr(ord('a') + i) + "__"
-            for i, nested_path in enumerate(self.sf.query_paths)
+            for i, nested_path in enumerate(self.snowflake.query_paths)
         }
 
         sorts = []
@@ -87,7 +87,7 @@ class SetOpTable(InsertTable):
         # EVERY SELECT STATEMENT THAT WILL BE REQUIRED, NO MATTER THE DEPTH
         # WE WILL CREATE THEM ACCORDING TO THE DEPTH REQUIRED
         nested_path = []
-        for step, sub_table in self.sf.tables:
+        for step, sub_table in self.snowflake.tables:
             nested_path.insert(0, step)
             nested_doc_details = {
                 "sub_table": sub_table,
@@ -191,7 +191,7 @@ class SetOpTable(InsertTable):
             index_to_column
         )
 
-        for n, _ in self.sf.tables:
+        for n, _ in self.snowflake.tables:
             sorts.append(quote_column(COLUMN + text(index_to_uid[n])))
 
         ordered_sql = ConcatSQL((
@@ -282,7 +282,7 @@ class SetOpTable(InsertTable):
             data = result.data
 
         if query.format == "cube":
-            # for f, full_name in self.sf.tables:
+            # for f, full_name in self.snowflake.tables:
             #     if f != '.' or (test_dots(cols) and is_list(query.select)):
             #         num_rows = len(result.data)
             #         num_cols = MAX([c.push_column for c in cols]) + 1 if len(cols) else 0
@@ -351,7 +351,7 @@ class SetOpTable(InsertTable):
                 )
 
         elif query.format == "table":
-            # for f, _ in self.sf.tables:
+            # for f, _ in self.snowflake.tables:
             #     if frum.endswith(f):
             #         num_column = MAX([c.push_column for c in cols]) + 1
             #         header = [None] * num_column
@@ -396,7 +396,7 @@ class SetOpTable(InsertTable):
                 )
 
         else:
-            # for f, _ in self.sf.tables:
+            # for f, _ in self.snowflake.tables:
             #     if frum.endswith(f) or (test_dots(cols) and is_list(query.select)):
             #         data = []
             #         for d in result.data:
@@ -463,7 +463,7 @@ class SetOpTable(InsertTable):
         if not where_clause:
             where_clause = SQL_TRUE
         # STATEMENT FOR EACH NESTED PATH
-        for i, (nested_path, sub_table) in enumerate(self.sf.tables):
+        for i, (nested_path, sub_table) in enumerate(self.snowflake.tables):
             if any(startswith_field(nested_path, d) for d in done):
                 continue
 
@@ -485,10 +485,10 @@ class SetOpTable(InsertTable):
                         select_clause.append(sql_alias(SQL_NULL, sql_select.column_alias))
 
                 if nested_path == ".":
-                    from_clause += SQL_FROM + sql_alias(quote_column(self.sf.fact_name), alias)
+                    from_clause += SQL_FROM + sql_alias(quote_column(self.snowflake.fact_name), alias)
                 else:
                     from_clause += (
-                        SQL_LEFT_JOIN + sql_alias(quote_column(concat_field(self.sf.fact_name, sub_table.name)), alias) +
+                        SQL_LEFT_JOIN + sql_alias(quote_column(concat_field(self.snowflake.fact_name, sub_table.name)), alias) +
                         SQL_ON + quote_column(alias, PARENT) + " = " + quote_column(parent_alias, UID)
                     )
                     where_clause = sql_iso(where_clause) + SQL_AND + quote_column(alias, ORDER) + " > 0"
@@ -498,11 +498,11 @@ class SetOpTable(InsertTable):
                 # PARENT TABLE
                 # NO NEED TO INCLUDE COLUMNS, BUT WILL INCLUDE ID AND ORDER
                 if nested_path == ".":
-                    from_clause += SQL_FROM + quote_column(self.sf.fact_name + " " + alias)
+                    from_clause += SQL_FROM + quote_column(self.snowflake.fact_name + " " + alias)
                 else:
                     parent_alias = alias = unichr(ord('a') + i - 1)
                     from_clause += (
-                        SQL_LEFT_JOIN + quote_column(concat_field(self.sf.fact_name, sub_table.name)) + " " + alias +
+                        SQL_LEFT_JOIN + quote_column(concat_field(self.snowflake.fact_name, sub_table.name)) + " " + alias +
                         SQL_ON + quote_column(alias, PARENT) + " = " + quote_column(parent_alias, UID)
                     )
                     where_clause = sql_iso(where_clause) + SQL_AND + quote_column(parent_alias, ORDER) + " > 0"
@@ -512,7 +512,7 @@ class SetOpTable(InsertTable):
                 # CHILD TABLE
                 # GET FIRST ROW FOR EACH NESTED TABLE
                 from_clause += (
-                    SQL_LEFT_JOIN + sql_alias(quote_column(concat_field(self.sf.fact_name, sub_table.name)), alias) +
+                    SQL_LEFT_JOIN + sql_alias(quote_column(concat_field(self.snowflake.fact_name, sub_table.name)), alias) +
                     SQL_ON + quote_column(alias, PARENT) + " = " + quote_column(parent_alias, UID) +
                     SQL_AND + quote_column(alias, ORDER) + " = 0"
                 )

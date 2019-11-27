@@ -6,46 +6,38 @@ from mo_collections import not_right, not_left
 from mo_dots import Data, Null
 from mo_math import ceiling
 
-SHOW_CHARTS = True
+SHOW_CHARTS = False
 
 
-MIN_POINTS = 6
-MAX_POINTS = 24
-
-operator_scale = 5
-operator_radius = 30
-forward = np.exp(-np.arange(operator_radius) / operator_scale) / operator_scale
-
-# CHOICE OF edge_operator DEPENDS ON STD AND P_THRESHOLD
-edge_operator = np.concatenate((-forward[::-1], forward))  # APPROX sign(x)*exp(-abs(x))
-TOP_EDGES = 0.05  # NUMBER OF POINTS TO INVESTIGATE EDGES (PERCENT)
 P_THRESHOLD = pow(10, -5)
+MIN_POINTS = 6
+MAX_POINTS = 50
+TOP_EDGES = 0.05  # NUMBER OF POINTS TO INVESTIGATE EDGES (PERCENT)
 JITTER = 20  # NUMBER OF SAMPLES (+/-) TO LOOK FOR BETTER EDGES
 
-ABS = 1
+operator_scale = 5
+operator_length = 30
+forward = np.exp(-np.arange(operator_length) / operator_scale) / operator_scale
+edge_operator = np.concatenate(
+    (
+        -forward[::-1],  # exp(x)
+        [0] * MIN_POINTS,  # ZERO IN THE MIDDLE?
+        forward,  # exp(-x)
+    )
+)
+operator_radius = len(edge_operator) // 2
+
+PERFHERDER_THRESHOLD_TYPE_ABS = 1
 
 
 def find_segments(values, diff_type, diff_threshold):
     values = np.array(values)
     logs = np.log(values)
-    # EDGE DETECTION BASED ON VALUE
-    # values = np.array(values)
-    # plot(values)
-    # extra = np.concatenate((
-    #     np.repeat(values[0], filter_radius),
-    #     values,
-    #     np.repeat(values[-1], filter_radius)
-    # ))/np.mean(values)
-    #
-    # edge_detection = np.convolve(extra, edge_filter, mode="valid")
-    # plot(edge_detection)
-
-    # EDGE DETECTION BASED ON RANK
     ranks = rankdata(values)
-    SHOW_CHARTS and plot(ranks, title="RANKS")
+
     # ADD SOME EXTRA DATA TO EDGES TO MINIMIZE EDGE ARTIFACTS
     # CONVERT RANK TO PERCENTILE
-    extra = (
+    percentiles = (
         np.concatenate(
             (
                 np.repeat(ranks[0], operator_radius),
@@ -55,9 +47,11 @@ def find_segments(values, diff_type, diff_threshold):
         )
         - 1
     ) / len(values)
-    edge_detection = np.convolve(extra, edge_operator, mode="valid")
+    SHOW_CHARTS and plot(percentiles[operator_radius:-operator_radius], title="RANKS")
+    edge_detection = np.convolve(percentiles, edge_operator, mode="valid")
     SHOW_CHARTS and plot(edge_detection, title="EDGES")
     top_edges = np.argsort(-np.abs(edge_detection))[: ceiling(len(values) * TOP_EDGES)]
+    top_edges = filter_nearby_edges(top_edges)
 
     # SORT THE EDGE DETECTION
     segments = np.array([0, len(values)] + list(top_edges))
@@ -75,11 +69,18 @@ def find_segments(values, diff_type, diff_threshold):
             # NO EVIDENCE OF DIFFERENCE, COLLAPSE SEGMENT
             segments[i + 1] = segments[i]
             continue
-        elif diff_type == ABS and np.abs(np.median(values[s:best_mid]) - np.median(values[best_mid:e])) < diff_threshold:
+        elif (
+                diff_type == PERFHERDER_THRESHOLD_TYPE_ABS
+                and np.abs(np.median(values[s:best_mid]) - np.median(values[best_mid:e]))
+                < diff_threshold
+        ):
             # DIFFERENCE IS TOO SMALL
             segments[i + 1] = segments[i]
             continue
-        elif np.abs(np.median(logs[s: best_mid]) - np.median(logs[best_mid: e])) < diff_threshold / 100:
+        elif (
+            np.abs(np.median(logs[s:best_mid]) - np.median(logs[best_mid:e]))
+            < diff_threshold / 100
+        ):
             # DIFFERENCE IS TOO SMALL
             segments[i + 1] = segments[i]
             continue
@@ -89,6 +90,17 @@ def find_segments(values, diff_type, diff_threshold):
 
     segments = tuple(sorted(set(segments)))
     return segments
+
+
+def filter_nearby_edges(edges):
+    last = edges[0]
+    filter_edges = [last]
+    for e in edges[1:]:
+        if e - MIN_POINTS <= last <= e + MIN_POINTS:
+            continue
+        filter_edges.append(e)
+        last = e
+    return np.array(filter_edges)
 
 
 def cumvar(values):
@@ -109,7 +121,8 @@ def cumSS(values):
     cummean = np.cumsum(values) / count
     return (values - cummean) ** 2
 
-no_good=Data(pvalue=1)
+
+no_good_edge = Data(pvalue=1)
 
 
 def jitter_MWU(values, start, mid, end):
@@ -117,15 +130,15 @@ def jitter_MWU(values, start, mid, end):
     m_start = min(mid, max(start + MIN_POINTS, mid - JITTER))
     m_end = max(mid, min(mid + JITTER, end - MIN_POINTS))
     if m_start == m_end:
-        return no_good, no_good, mid
+        return no_good_edge, no_good_edge, mid
     mids = np.array(range(m_start, m_end))
 
     # MWU SCORES
     m_score = np.array(
         [
             stats.mannwhitneyu(
-                values[start:m],
-                values[m:end],
+                values[max(start, m - MAX_POINTS) : m],
+                values[m : min(end, m + MAX_POINTS)],
                 use_continuity=True,
                 alternative="two-sided",
             )
@@ -136,16 +149,23 @@ def jitter_MWU(values, start, mid, end):
     t_score = np.array(
         [
             stats.ttest_ind(
-                values[start:m],
-                values[m:end],
-                equal_var=False
+                values[max(start, m - MAX_POINTS) : m],
+                values[m : min(end, m + MAX_POINTS)],
+                equal_var=False,
             )
             for m in mids
         ]
     )
 
     # TOTAL SUM-OF-SQUARES
-    v_prefix = not_right(not_left(cumSS(values[start:m_end]), m_start - start - 1), 1)
+    if m_start - start == 0:
+        # WE CAN NOT OFFSET BY ONE, SO WE ADD A DUMMY VALUE
+        v_prefix = np.array([np.nan] + list(not_right(cumSS(values[start:m_end]), 1)))
+    else:
+        # OFFSET BY ONE, WE WANT cumSS OF ALL **PREVIOUS** VALUES
+        v_prefix = not_right(
+            not_left(cumSS(values[start:m_end]), m_start - start - 1), 1
+        )
     v_suffix = not_right(cumSS(values[m_start:end][::-1])[::-1], end - m_end)
     v_score = v_prefix + v_suffix
 

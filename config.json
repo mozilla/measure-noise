@@ -7,6 +7,9 @@
         },
         "$ref": "~/private.json#treeherder"
     },
+    "local_db": {
+        "filename": "perf_summary.sqlite"
+    },
     "constants": {
         "pyLibrary.env.http.default_headers": {"Referer": "MySQL-to-S3"},
         "mysql_to_s3.snowflake_schema.DEBUG": true
