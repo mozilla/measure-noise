@@ -62,7 +62,7 @@ def find_segments(values, diff_type, diff_threshold):
     # SORT THE EDGE DETECTION
     segments = np.array([0, len(values)] + list(top_edges))
     segments = np.sort(segments)
-    diffs = [0] * len(segments)
+    diffs = np.zeros(len(segments))
 
     # CAN WE DO BETTER?
     for i, _ in enumerate(segments[:-2]):
@@ -93,11 +93,10 @@ def find_segments(values, diff_type, diff_threshold):
         segments[i + 1] = best_mid
         diffs[i + 1] = diff_percent
 
-    segments, diffs = zip(*([(0, 0)]+[
-        (e, d)
-        for s, e, d in zip(segments, segments[1:], diffs[1:])
-        if s != e
-    ]))
+    # REMOVE ZERO-LENGTH SEGMENTS
+    non_zero_segments = segments[:-1] != segments[1:]
+    segments = tuple([0] + list(segments[1:][non_zero_segments]))
+    diffs = tuple([0] + list(diffs[1:][non_zero_segments]))
     return segments, diffs
 
 
