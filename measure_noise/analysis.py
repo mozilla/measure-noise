@@ -1,6 +1,7 @@
-import mo_math
 import numpy as np
+from scipy import stats
 
+import mo_math
 from jx_python import jx
 from jx_sqlite.container import Container
 from measure_noise import deviance
@@ -13,11 +14,12 @@ from mo_files import File
 from mo_future import text, first
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
-from mo_threads import Queue, Thread, THREAD_STOP
+from mo_threads import Queue, Thread
 from mo_times import MONTH, Date, Timer, WEEK
 
 FILENAME = "signatures"
 DATA = File("../MySQL-to-S3")
+IGNORE_TOP = 3  # WHEN CALCULATING NOISE OR DEVIANCE, IGNORE SOME EXTREME VALUES
 
 config = Null
 
@@ -82,8 +84,9 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
         # MEASURE DEVIANCE (HOW TO KNOW THE START POINT?)
         s, e = new_segments[-2], new_segments[-1]
         last_segment = np.array(values[s: e])
-        dev_status, dev_score = deviance(last_segment)
-        relative_noise = np.std(last_segment) / np.mean(last_segment)
+        trimmed_segment = last_segment[np.argsort(last_segment)[IGNORE_TOP: -IGNORE_TOP]]
+        dev_status, dev_score = deviance(trimmed_segment)
+        relative_noise = np.std(trimmed_segment) / np.mean(trimmed_segment)
         Log.note(
             "\n\tdeviance = {{deviance}}\n\tnoise={{std}}",
             title=title,
@@ -163,7 +166,7 @@ if __name__ == "__main__":
             },
             {
                 "name": ["--noise", "--noisy"],
-                "dest": "moise",
+                "dest": "noise",
                 "type": int,
                 "help": "show number of top noisiest series",
                 "action": "store",
@@ -229,6 +232,7 @@ if __name__ == "__main__":
 
             Log.note("Local database is up to date")
 
+        # DEVIANT
         if config.args.deviant:
             tops = summary_table.query(
                 {
@@ -239,8 +243,48 @@ if __name__ == "__main__":
                             {"gte": {"num_pushes": 1}},
                         ]
                     },
-                    "sort": {"value": {"abs": "dev_score"}, "sort": "desc"},
+                    "sort": {"value": {"abs": "max_diff"}, "sort": "desc"},
                     "limit": config.args.deviant,
+                    "format": "list",
+                }
+            ).data
+
+            for id in tops:
+                process(id, show=True)
+
+        # NOISE
+        if config.args.noise:
+            tops = summary_table.query(
+                {
+                    "select": "id",
+                    "where": {
+                        "and": [
+                            {"in": {"id": candidates.id}},
+                            {"gte": {"num_pushes": 1}},
+                        ]
+                    },
+                    "sort": {"value": {"abs": "relative_noise"}, "sort": "desc"},
+                    "limit": config.args.noise,
+                    "format": "list",
+                }
+            ).data
+
+            for id in tops:
+                process(id, show=True)
+
+        # MISSING
+        if config.args.missing:
+            tops = summary_table.query(
+                {
+                    "select": "id",
+                    "where": {
+                        "and": [
+                            {"in": {"id": candidates.id}},
+                            {"gte": {"num_pushes": 1}},
+                        ]
+                    },
+                    "sort": {"value": {"abs": "relative_noise"}, "sort": "desc"},
+                    "limit": config.args.missing,
                     "format": "list",
                 }
             ).data
