@@ -9,7 +9,7 @@
         "debug": false
     },
     "analysis": {
-        "limit": 1000,
+        "download_limit": 1000,
         "local_db": {
             "filename": "perf_summary.sqlite",
             "debug": true
@@ -21,7 +21,7 @@
                 "WHERE",
                 "s.framework_id = 10 AND",
                 "(s.test IS NULL or s.test='' or s.test=s.suite) AND",
-                "s.repository_id <> 1  -- mozilla-central",
+                "s.repository_id = 77  -- autoland",
                 "GROUP BY s.id"
             ],
             "separator": "\n"
@@ -29,9 +29,9 @@
     },
     "constants": {
         "pyLibrary.env.http.default_headers": {
-            "Referer": "MySQL-to-S3"
+            "Referer": "https://github.com/mozilla/measure-noise"
         },
-        "mysql_to_s3.snowflake_schema.DEBUG": true
+        "measure_noise.step_detector.SHOW_CHARTS": false
     },
     "debug": {
         "trace": true,

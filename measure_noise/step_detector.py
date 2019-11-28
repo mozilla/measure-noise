@@ -3,13 +3,13 @@ from scipy.stats import stats, rankdata
 
 from measure_noise.utils import plot
 from mo_collections import not_right, not_left
-from mo_dots import Data, Null
+from mo_dots import Data
 from mo_math import ceiling
 
 SHOW_CHARTS = False
 
 
-P_THRESHOLD = pow(10, -5)
+P_THRESHOLD = pow(10, -4)
 MIN_POINTS = 6
 MAX_POINTS = 50
 TOP_EDGES = 0.05  # NUMBER OF POINTS TO INVESTIGATE EDGES (PERCENT)
@@ -53,7 +53,10 @@ def find_segments(values, diff_type, diff_threshold):
     SHOW_CHARTS and plot(percentiles[operator_radius:-operator_radius], title="RANKS")
     edge_detection = np.convolve(percentiles, edge_operator, mode="valid")
     SHOW_CHARTS and plot(edge_detection, title="EDGES")
-    top_edges = np.argsort(-np.abs(edge_detection))[: ceiling(len(values) * TOP_EDGES)]
+    # top_edges = edge_detection[np.abs(edge_detection)>0.2]
+    edge_detection = np.abs(edge_detection)
+    top_edges = np.argsort(-edge_detection)
+    top_edges = top_edges[edge_detection[top_edges] > 0.2]
     top_edges = filter_nearby_edges(top_edges)
 
     # SORT THE EDGE DETECTION
@@ -74,21 +77,21 @@ def find_segments(values, diff_type, diff_threshold):
             segments[i + 1] = segments[i]
             continue
         if diff_type == PERFHERDER_THRESHOLD_TYPE_ABS:
-            diff = np.abs(np.median(values[s:best_mid]) - np.median(values[best_mid:e]))
-            if diff <diff_threshold:
+            diff_percent = np.abs(np.median(values[s:best_mid]) - np.median(values[best_mid:e]))
+            if diff_percent <diff_threshold:
                 # DIFFERENCE IS TOO SMALL
                 segments[i + 1] = segments[i]
                 continue
-        diff = np.abs(np.median(logs[best_mid:e])/np.median(logs[s:best_mid]) - 1)
+        diff_percent = np.abs(np.median(values[best_mid:e])/np.median(values[s:best_mid]) - 1)
 
-        if diff < diff_threshold / 100:
+        if diff_percent < diff_threshold / 100:
             # DIFFERENCE IS TOO SMALL
             segments[i + 1] = segments[i]
             continue
 
         # LOOKS GOOD
         segments[i + 1] = best_mid
-        diffs[i + 1] = diff
+        diffs[i + 1] = diff_percent
 
     segments, diffs = zip(*([(0, 0)]+[
         (e, d)

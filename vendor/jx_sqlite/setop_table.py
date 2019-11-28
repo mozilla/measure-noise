@@ -77,7 +77,7 @@ class SetOpTable(InsertTable):
                     column_alias = _make_column_name(column_number)
                     sql_selects.append(sql_alias(sql, column_alias))
                     if select.sort == -1:
-                        sorts.append(quote_column(column_alias) + SQL_IS_NOT_NULL)
+                        sorts.append(quote_column(column_alias) + SQL_IS_NULL)
                         sorts.append(quote_column(column_alias) + " DESC")
                     else:
                         sorts.append(quote_column(column_alias) + SQL_IS_NULL)

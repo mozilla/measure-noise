@@ -13,6 +13,10 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import Mapping
 
+import math
+
+import mo_math
+
 from jx_base import Column, generateGuid
 from jx_base.expressions import jx_expression
 from jx_sqlite import GUID, ORDER, PARENT, UID, get_if_type, get_type, typed_column, untyped_column

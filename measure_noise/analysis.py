@@ -3,7 +3,7 @@ import numpy as np
 import mo_math
 from jx_python import jx
 from jx_sqlite.container import Container
-from measure_noise import deviance
+from measure_noise import deviance, step_detector
 from measure_noise.extract_perf import get_all_signatures, get_signature, get_dataum
 from measure_noise.step_detector import find_segments, MAX_POINTS
 from measure_noise.utils import assign_colors
@@ -105,7 +105,7 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
             d for s, d in zip(new_segments, diffs) if s not in old_segments
         )
 
-        Log.alert("Disagree")
+        Log.alert("Disagree max_diff={{max_diff}}", max_diff=max_diff)
         Log.note("old={{old}}, new={{new}}", old=old_segments, new=new_segments)
         if show and len(pushes):
             assign_colors(values, old_segments, title="OLD " + title)
@@ -161,16 +161,15 @@ def update_local_database():
     # CHOOSE MISSING, THEN OLDEST, UP TO "RECENT"
     missing = list(set(candidates.id) - set(exists.id))
 
-    too_old = (Date.today() - parse(LOCAL_RETENTION)).unix
-    needs_update = missing + [e for e in exists if e.last_updated < too_old]
+    too_old = Date.today() - parse(LOCAL_RETENTION)
+    needs_update = missing + [e for e in exists if e.last_updated < too_old.unix]
     Log.alert("{{num}} series are candidates for local update", num=len(needs_update))
 
     limited_update = Queue("sigs")
-    limited_update.extend(left(needs_update, coalesce(config.analysis.limit, 100)))
-    with Timer(
-        "Updating local database with  {{num}} series", {"num": len(limited_update)}
-    ):
+    limited_update.extend(left(needs_update, coalesce(config.analysis.download_limit, 100)))
+    Log.alert("Updating local database with {{num}} series", num=len(limited_update))
 
+    with Timer("Updating local database"):
         def loop(please_stop):
             while not please_stop:
                 sig_id = limited_update.pop_one()
@@ -209,6 +208,8 @@ def main():
 
     if config.args.id:
         # EXIT EARLY AFTER WE GOT THE SPECIFIC IDS
+        if len(config.args.id)<4:
+            step_detector.SHOW_CHARTS = True
         for id in config.args.id:
             process(id, show=True)
         return
