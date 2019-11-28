@@ -63,17 +63,17 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
             values, sig.alert_change_type, sig.alert_threshold
         )
 
+    # USE PERFHERDER ALERTS TO IDENTIFY OLD SEGMENTS
     old_alerts = [p for p in pushes if any(r.alert.id for r in p.runs)]
     old_segments = tuple(
         sorted(
             set(
-                [0]
-                + [
+                [
                     i
                     for i, p in enumerate(old_alerts)
                     if any(r.alert.id for r in p.runs)
                 ]
-                + [len(pushes)]
+                + [0, len(pushes)]
             )
         )
     )
@@ -83,7 +83,7 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
         dev_score = None
         relative_noise = None
     else:
-        # MEASURE DEVIANCE (HOW TO KNOW THE START POINT?)
+        # MEASURE DEVIANCE (USE THE LAST SEGMENT)
         s, e = new_segments[-2], new_segments[-1]
         last_segment = np.array(values[s:e])
         trimmed_segment = last_segment[np.argsort(last_segment)[IGNORE_TOP:-IGNORE_TOP]]
@@ -96,7 +96,6 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
             std=relative_noise,
         )
 
-    # CHECK FOR OLD ALERTS
     max_diff = None
     is_diff = new_segments != old_segments
     if is_diff:
@@ -220,7 +219,7 @@ def main():
 
     # DEVIANT
     if config.args.deviant:
-        show_sorted({"value": {"abs": "max_diff"}, "sort": "desc"})
+        show_sorted({"value": {"abs": "dev_score"}, "sort": "desc"})
 
     # NOISE
     if config.args.noise:
