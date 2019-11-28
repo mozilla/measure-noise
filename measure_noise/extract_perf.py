@@ -3,27 +3,14 @@ from mo_future import text
 from mo_logs.strings import expand_template
 from pyLibrary.sql.mysql import MySQL, quote_list
 
-from pyLibrary.sql import SQL
 
-WORKLIST = SQL("""
-    SELECT s.id 
-    FROM performance_signature s
-    WHERE
-        -- s.id=2153028
-        s.framework_id = 10 AND 
-        (s.test IS NULL or s.test='' or s.test=s.suite) and
-        s.repository_id = 77  AND -- autoland 
-        s.repository_id <> 4  AND -- try
-        s.repository_id <> 1  -- mozilla-central
-    GROUP BY s.id 
-    -- ORDER BY s.last_updated DESC
-    -- LIMIT 1
-""")
-
-def get_worklist(db_config):
+def get_all_signatures(db_config, sql):
+    """
+    RETURN ALL SIGNATURES FROM PERFHERDER DATABASE
+    """
     db = MySQL(db_config)
     with db:
-        return db.query(text(WORKLIST))
+        return db.query(text(sql))
 
 
 def get_signature(db_config, signature_id):

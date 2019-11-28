@@ -1,27 +1,29 @@
 import numpy as np
-from scipy import stats
 
 import mo_math
 from jx_python import jx
 from jx_sqlite.container import Container
 from measure_noise import deviance
-from measure_noise.extract_perf import get_worklist, get_signature, get_dataum
+from measure_noise.extract_perf import get_all_signatures, get_signature, get_dataum
 from measure_noise.step_detector import find_segments, MAX_POINTS
 from measure_noise.utils import assign_colors
 from mo_collections import left
 from mo_dots import Null, wrap, Data, coalesce
-from mo_files import File
 from mo_future import text, first
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
 from mo_threads import Queue, Thread
-from mo_times import MONTH, Date, Timer, WEEK
+from mo_times import MONTH, Date, Timer
+from mo_times.dates import parse
 
-FILENAME = "signatures"
-DATA = File("../MySQL-to-S3")
 IGNORE_TOP = 3  # WHEN CALCULATING NOISE OR DEVIANCE, IGNORE SOME EXTREME VALUES
+LOCAL_RETENTION = "3day"  # HOW LONG BEFORE WE REFRESH LOCAL DATABASE ENTRIES
+
 
 config = Null
+local_container = Null
+summary_table = Null
+candidates = Null
 
 
 def process(sig_id, show=False, show_limit=MAX_POINTS):
@@ -83,8 +85,8 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
     else:
         # MEASURE DEVIANCE (HOW TO KNOW THE START POINT?)
         s, e = new_segments[-2], new_segments[-1]
-        last_segment = np.array(values[s: e])
-        trimmed_segment = last_segment[np.argsort(last_segment)[IGNORE_TOP: -IGNORE_TOP]]
+        last_segment = np.array(values[s:e])
+        trimmed_segment = last_segment[np.argsort(last_segment)[IGNORE_TOP:-IGNORE_TOP]]
         dev_status, dev_score = deviance(trimmed_segment)
         relative_noise = np.std(trimmed_segment) / np.mean(trimmed_segment)
         Log.note(
@@ -145,11 +147,99 @@ def is_diff(A, B):
     # return False
 
 
-RECENT = (Date.today() - WEEK).unix
+def update_local_database():
+    # GET EVERYTHING WE HAVE SO FAR
+    exists = summary_table.query(
+        {
+            "select": ["id", "last_updated"],
+            "where": {"and": [{"in": {"id": candidates.id}}, {"exists": "num_pushes"}]},
+            "sort": "last_updated",
+            "limit": 100000,
+            "format": "list",
+        }
+    ).data
+    # CHOOSE MISSING, THEN OLDEST, UP TO "RECENT"
+    missing = list(set(candidates.id) - set(exists.id))
+
+    too_old = (Date.today() - parse(LOCAL_RETENTION)).unix
+    needs_update = missing + [e for e in exists if e.last_updated < too_old]
+    Log.alert("{{num}} series are candidates for local update", num=len(needs_update))
+
+    limited_update = Queue("sigs")
+    limited_update.extend(left(needs_update, coalesce(config.analysis.limit, 100)))
+    with Timer(
+        "Updating local database with  {{num}} series", {"num": len(limited_update)}
+    ):
+
+        def loop(please_stop):
+            while not please_stop:
+                sig_id = limited_update.pop_one()
+                if not sig_id:
+                    return
+                process(sig_id)
+
+        threads = [Thread.run(text(i), loop) for i in range(3)]
+        for t in threads:
+            t.join()
+
+    Log.note("Local database is up to date")
+
+
+def show_sorted(sort):
+    tops = summary_table.query(
+        {
+            "select": "id",
+            "where": {
+                "and": [{"in": {"id": candidates.id}}, {"gte": {"num_pushes": 1}}]
+            },
+            "sort": sort,
+            "limit": config.args.noise,
+            "format": "list",
+        }
+    ).data
+
+    for id in tops:
+        process(id, show=True)
+
+
+def main():
+    global local_container, summary_table, candidates
+    local_container = Container(db=config.analysis.local_db)
+    summary_table = local_container.get_or_create_facts("perf_summary")
+
+    if config.args.id:
+        # EXIT EARLY AFTER WE GOT THE SPECIFIC IDS
+        for id in config.args.id:
+            process(id, show=True)
+        return
+
+    candidates = get_all_signatures(config.database, config.analysis.signatures_sql)
+    if not config.args.now:
+        update_local_database(summary_table, candidates)
+
+    # DEVIANT
+    if config.args.deviant:
+        show_sorted({"value": {"abs": "max_diff"}, "sort": "desc"})
+
+    # NOISE
+    if config.args.noise:
+        show_sorted({"value": {"abs": "relative_noise"}, "sort": "desc"})
+
+    # MISSING
+    if config.args.missing:
+        show_sorted({"value": {"abs": "max_diff"}, "sort": "desc"})
+
 
 if __name__ == "__main__":
     config = startup.read_settings(
         [
+            {
+                "name": ["--id", "--key", "--ids", "--keys"],
+                "dest": "id",
+                "nargs": "*",
+                "type": int,
+                "help": "show specific signatures",
+            },
             {
                 "name": "--now",
                 "dest": "now",
@@ -159,139 +249,36 @@ if __name__ == "__main__":
             {
                 "name": ["--dev", "--deviant", "--deviance"],
                 "dest": "deviant",
+                "nargs": "?",
+                "const": 10,
                 "type": int,
                 "help": "show number of top deviant series",
                 "action": "store",
-                "default": 0,
             },
             {
                 "name": ["--noise", "--noisy"],
                 "dest": "noise",
+                "nargs": "?",
+                "const": 10,
                 "type": int,
                 "help": "show number of top noisiest series",
                 "action": "store",
-                "default": 0,
             },
             {
                 "name": ["--missing", "--missing-alerts"],
                 "dest": "missing",
+                "nargs": "?",
+                "const": 10,
                 "type": int,
                 "help": "show number of missing alerts",
                 "action": "store",
-                "default": 0,
             },
         ]
     )
     constants.set(config.constants)
     try:
         Log.start(config.debug)
-
-        local_container = Container(db=config.analysis.local_db)
-        summary_table = local_container.get_or_create_facts("perf_summary")
-        candidates = get_worklist(config.database)
-
-        if not config.args.now:
-            # GET EVERYTHING WE HAVE SO FAR
-            exists = summary_table.query(
-                {
-                    "select": ["id", "last_updated"],
-                    "where": {
-                        "and": [
-                            {"in": {"id": candidates.id}},
-                            {"exists": "num_pushes"},
-                        ]
-                    },
-                    "sort": "last_updated",
-                    "limit": 100000,
-                    "format": "list",
-                }
-            ).data
-            # CHOOSE MISSING, THEN OLDEST, UP TO "RECENT"
-            missing = list(set(candidates.id) - set(exists.id))
-
-            needs_update = missing + [e for e in exists if e.last_updated < RECENT]
-            Log.alert(
-                "{{num}} series are candidates for local update",
-                num=len(needs_update)
-            )
-
-            limited_update = Queue("sigs")
-            limited_update.extend(left(needs_update, coalesce(config.analysis.limit, 100)))
-            Log.alert("Updating {{num}} series", num=len(limited_update))
-
-            def loop(please_stop):
-                while not please_stop:
-                    sig_id = limited_update.pop_one()
-                    if not sig_id:
-                        return
-                    process(sig_id)
-
-            threads = [Thread.run(text(i), loop) for i in range(3)]
-            for t in threads:
-                t.join()
-
-            Log.note("Local database is up to date")
-
-        # DEVIANT
-        if config.args.deviant:
-            tops = summary_table.query(
-                {
-                    "select": "id",
-                    "where": {
-                        "and": [
-                            {"in": {"id": candidates.id}},
-                            {"gte": {"num_pushes": 1}},
-                        ]
-                    },
-                    "sort": {"value": {"abs": "max_diff"}, "sort": "desc"},
-                    "limit": config.args.deviant,
-                    "format": "list",
-                }
-            ).data
-
-            for id in tops:
-                process(id, show=True)
-
-        # NOISE
-        if config.args.noise:
-            tops = summary_table.query(
-                {
-                    "select": "id",
-                    "where": {
-                        "and": [
-                            {"in": {"id": candidates.id}},
-                            {"gte": {"num_pushes": 1}},
-                        ]
-                    },
-                    "sort": {"value": {"abs": "relative_noise"}, "sort": "desc"},
-                    "limit": config.args.noise,
-                    "format": "list",
-                }
-            ).data
-
-            for id in tops:
-                process(id, show=True)
-
-        # MISSING
-        if config.args.missing:
-            tops = summary_table.query(
-                {
-                    "select": "id",
-                    "where": {
-                        "and": [
-                            {"in": {"id": candidates.id}},
-                            {"gte": {"num_pushes": 1}},
-                        ]
-                    },
-                    "sort": {"value": {"abs": "relative_noise"}, "sort": "desc"},
-                    "limit": config.args.missing,
-                    "format": "list",
-                }
-            ).data
-
-            for id in tops:
-                process(id, show=True)
-
+        main()
     except Exception as e:
         Log.warning("Problem with perf scan", e)
     finally:

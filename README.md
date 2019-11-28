@@ -68,6 +68,7 @@ Run with the config parameter
 
 Some other options are 
 
+* `--id` - show specific signature_ids
 * `--now` - Do not update local database, just show worst series right now
 * `--deviant=<int>` - Show number of series with most deviant noise 
 * `--noise=<int>` - Show number of series with largest relative standard deviation

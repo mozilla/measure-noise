@@ -13,10 +13,29 @@
         "local_db": {
             "filename": "perf_summary.sqlite",
             "debug": true
+        },
+        "signatures_sql": {
+            "$concat": [
+                "SELECT s.id,",
+                "FROM performance_signature s,",
+                "WHERE",
+                "-- s.id=2153028",
+                "s.framework_id = 10 AND",
+                "(s.test IS NULL or s.test='' or s.test=s.suite) AND",
+                "s.repository_id = 77  AND -- autoland",
+                "s.repository_id <> 4  AND -- try",
+                "s.repository_id <> 1  -- mozilla-central",
+                "GROUP BY s.id",
+                "-- ORDER BY s.last_updated DESC",
+                "-- LIMIT 1"
+            ],
+            "separator": "\n"
         }
     },
     "constants": {
-        "pyLibrary.env.http.default_headers": {"Referer": "MySQL-to-S3"},
+        "pyLibrary.env.http.default_headers": {
+            "Referer": "MySQL-to-S3"
+        },
         "mysql_to_s3.snowflake_schema.DEBUG": true
     },
     "debug": {
