@@ -12,7 +12,7 @@
         "download_limit": 1000,
         "local_db": {
             "filename": "perf_summary.sqlite",
-            "debug": true
+            "debug": false
         },
         "signatures_sql": {
             "$concat": [

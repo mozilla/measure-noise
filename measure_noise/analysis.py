@@ -183,7 +183,9 @@ def update_local_database():
     Log.note("Local database is up to date")
 
 
-def show_sorted(sort):
+def show_sorted(sort, limit):
+    if not limit:
+        return
     tops = summary_table.query(
         {
             "select": "id",
@@ -191,7 +193,7 @@ def show_sorted(sort):
                 "and": [{"in": {"id": candidates.id}}, {"gte": {"num_pushes": 1}}]
             },
             "sort": sort,
-            "limit": config.args.noise,
+            "limit": limit,
             "format": "list",
         }
     ).data
@@ -218,16 +220,28 @@ def main():
         update_local_database()
 
     # DEVIANT
-    if config.args.deviant:
-        show_sorted({"value": {"abs": "dev_score"}, "sort": "desc"})
+    show_sorted(
+        sort={"value": {"abs": "dev_score"}, "sort": "desc"},
+        limit=config.args.deviant
+    )
 
     # NOISE
-    if config.args.noise:
-        show_sorted({"value": {"abs": "relative_noise"}, "sort": "desc"})
+    show_sorted(
+        sort={"value": {"abs": "relative_noise"}, "sort": "desc"},
+        limit=config.args.noise
+    )
 
     # MISSING
-    if config.args.missing:
-        show_sorted({"value": {"abs": "max_diff"}, "sort": "desc"})
+    show_sorted(
+        sort={"value": {"abs": "max_diff"}, "sort": "desc"},
+        limit=config.args.missing
+    )
+
+    # PATHOLOGICAL
+    show_sorted(
+        sort={"value": "num_new_segments", "sort": "desc"},
+        limit=config.args.pathological
+    )
 
 
 if __name__ == "__main__":
@@ -265,14 +279,16 @@ if __name__ == "__main__":
                 "action": "store",
             },
             {
-                "name": ["--missing", "--missing-alerts"],
-                "dest": "missing",
+                "name": ["--pathological", "--pathological", "--pathology", "-p"],
+                "dest": "pathological",
                 "nargs": "?",
                 "const": 10,
                 "type": int,
-                "help": "show number of missing alerts",
+                "help": "show number of series that have most edges",
                 "action": "store",
             },
+
+
         ]
     )
     constants.set(config.constants)
