@@ -8,7 +8,7 @@ from measure_noise.extract_perf import get_all_signatures, get_signature, get_da
 from measure_noise.step_detector import find_segments, MAX_POINTS
 from measure_noise.utils import assign_colors
 from mo_collections import left
-from mo_dots import Null, wrap, Data, coalesce
+from mo_dots import Null, Data, coalesce, unwrap
 from mo_future import text, first
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
@@ -33,16 +33,16 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
     data = get_dataum(config.database, sig_id)
 
     min_date = (Date.today() - 3 * MONTH).unix
-    pushes = wrap(
+    pushes = jx.sort(
         [
-            {"value": median(rows.value), "runs": rows, **t}
+            {"value": median(rows.value), "runs": rows, "push": {"time": unwrap(t)["push.time"]}}
             for t, rows in jx.groupby(data, "push.time")
             if t["push\\.time"] > min_date
-        ]
+        ],
+        "push.time"
     )
 
     values = pushes.value
-
     title = "-".join(
         map(
             text,
@@ -64,13 +64,12 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
         )
 
     # USE PERFHERDER ALERTS TO IDENTIFY OLD SEGMENTS
-    old_alerts = [p for p in pushes if any(r.alert.id for r in p.runs)]
     old_segments = tuple(
         sorted(
             set(
                 [
                     i
-                    for i, p in enumerate(old_alerts)
+                    for i, p in enumerate(pushes)
                     if any(r.alert.id for r in p.runs)
                 ]
                 + [0, len(pushes)]
@@ -276,6 +275,15 @@ if __name__ == "__main__":
                 "const": 10,
                 "type": int,
                 "help": "show number of top noisiest series",
+                "action": "store",
+            },
+            {
+                "name": ["--missing", "--miss", "-m"],
+                "dest": "missing",
+                "nargs": "?",
+                "const": 10,
+                "type": int,
+                "help": "show number of series that are missing perfherder alerts",
                 "action": "store",
             },
             {
