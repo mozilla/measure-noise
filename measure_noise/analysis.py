@@ -8,7 +8,7 @@ from measure_noise.extract_perf import get_all_signatures, get_signature, get_da
 from measure_noise.step_detector import find_segments, MAX_POINTS
 from measure_noise.utils import assign_colors
 from mo_collections import left
-from mo_dots import Null, Data, coalesce, unwrap
+from mo_dots import Null, Data, coalesce, unwrap, listwrap
 from mo_future import text, first
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
@@ -96,11 +96,13 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
         )
 
     max_diff = None
-    is_diff = new_segments != old_segments
-    if is_diff:
+    _is_diff = is_diff(new_segments, old_segments)
+    if _is_diff:
         # FOR MISSING POINTS, CALC BIGGEST DIFF
         max_diff = mo_math.MAX(
-            d for s, d in zip(new_segments, diffs) if s not in old_segments
+            d
+            for s, d in zip(new_segments, diffs)
+            if all(not (s-2 <= o <= s+2)for o in old_segments)
         )
 
         Log.alert("Disagree max_diff={{max_diff}}", max_diff=max_diff)
@@ -120,7 +122,7 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
             id=sig.id,
             title=title,
             num_pushes=len(pushes),
-            is_diff=is_diff,
+            is_diff=_is_diff,
             max_diff=max_diff,
             num_new_segments=len(new_segments),
             num_old_segments=len(old_segments),
@@ -133,16 +135,15 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
 
 
 def is_diff(A, B):
-    return A != B
-    # if len(A) != len(B):
-    #     return True
-    #
-    # for a, b in zip(A, B):
-    #     if b - 5 <= a <= b + 5:
-    #         continue
-    #     else:
-    #         return True
-    # return False
+    if len(A) != len(B):
+        return True
+
+    for a, b in zip(A, B):
+        if b - 2 <= a <= b + 2:
+            continue
+        else:
+            return True
+    return False
 
 
 def update_local_database():
@@ -182,14 +183,14 @@ def update_local_database():
     Log.note("Local database is up to date")
 
 
-def show_sorted(sort, limit):
+def show_sorted(sort, limit, where=True):
     if not limit:
         return
     tops = summary_table.query(
         {
             "select": "id",
             "where": {
-                "and": [{"in": {"id": candidates.id}}, {"gte": {"num_pushes": 1}}]
+                "and": [{"in": {"id": candidates.id}}, {"gte": {"num_pushes": 1}}]+listwrap(where)
             },
             "sort": sort,
             "limit": limit,
@@ -233,6 +234,7 @@ def main():
     # MISSING
     show_sorted(
         sort={"value": {"abs": "max_diff"}, "sort": "desc"},
+        where={"lte": {"num_new_segments": 6}},
         limit=config.args.missing
     )
 
