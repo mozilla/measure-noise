@@ -5,10 +5,15 @@
         "ssl": {
             "ca": "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
         },
-        "$ref": "~/private.json#treeherder"
+        "$ref": "~/private.json#treeherder",
+        "debug": false
     },
-    "local_db": {
-        "filename": "perf_summary.sqlite"
+    "analysis": {
+        "limit": 1000,
+        "local_db": {
+            "filename": "perf_summary.sqlite",
+            "debug": true
+        }
     },
     "constants": {
         "pyLibrary.env.http.default_headers": {"Referer": "MySQL-to-S3"},
@@ -18,8 +23,6 @@
         "trace": true,
         "cprofile": false
     }
-
-
 }
 
 

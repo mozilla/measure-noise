@@ -56,6 +56,7 @@ from jx_base.expressions import (
     NeOp as NeOp_,
     NotLeftOp as NotLeftOp_,
     NotOp as NotOp_,
+    AbsOp as AbsOp_,
     NotRightOp as NotRightOp_,
     NullOp,
     NumberOp as NumberOp_,
@@ -164,7 +165,7 @@ def check(func):
     return to_sql
 
 
-class SQLScript(SQLScript_):
+class SQLScript(SQLScript_, SQL):
     __slots__ = ("miss", "data_type", "expr", "frum", "many", "schema")
 
     def __init__(
@@ -208,11 +209,11 @@ class SQLScript(SQLScript_):
             Log.error("do not know how to handle")
 
     def __iter__(self):
-        if not self.many:
-            yield self
-        else:
-            Log.error("do not know how to handle")
-
+        """
+        ASSUMED PART OF class SQL, RETURN SQL
+        """
+        for e in self.expr:
+            yield e
 
     @property
     def sql(self):
@@ -513,7 +514,7 @@ class ExpOp(ExpOp_):
     to_sql = _binaryop_to_sql
 
 
-class ModOp(ModOp_):
+class AbsOp(ModOp_):
     to_sql = _binaryop_to_sql
 
 
@@ -614,7 +615,6 @@ class NeOp(NeOp_):
             .partial_eval()
             .to_sql(schema)
         )
-
 
 class BasicIndexOfOp(BasicIndexOfOp_):
     @check
@@ -746,6 +746,19 @@ class NotOp(NotOp_):
             )
         else:
             return not_expr.to_sql(schema)
+
+
+class AbsOp(AbsOp_):
+    @check
+    def to_sql(self, schema, not_null=False, boolean=False):
+        expr = SQLang[self.term].partial_eval().to_sql(schema)[0].sql.n
+        return SQLScript(
+            expr="ABS(" + expr + ")",
+            data_type=NUMBER,
+            frum=self,
+            miss=self.missing(),
+            schema=schema
+        )
 
 
 class AndOp(AndOp_):

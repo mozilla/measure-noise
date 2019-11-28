@@ -138,7 +138,7 @@ def _jx_expression(expr, lang):
         else:
             if not items:
                 return NULL
-            raise Log.error("{{instruction|json}} is not known", instruction=items)
+            raise Log.error("{{instruction|json}} is not known", instruction=expr)
 
     except Exception as e:
         Log.error("programmer error expr = {{value|quote}}", value=expr, cause=e)
@@ -1278,6 +1278,35 @@ class NotOp(Expression):
 
         output = inverse(self.lang[self.term].partial_eval())
         return output
+
+
+class AbsOp(Expression):
+    data_type = NUMBER
+
+    def __init__(self, term):
+        Expression.__init__(self, term)
+        self.term = term
+
+    def __data__(self):
+        return {"abs": self.term.__data__()}
+
+    def __eq__(self, other):
+        if not is_op(other, AbsOp):
+            return False
+        return self.term == other.term
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return self.lang[AbsOp(self.term.map(map_))]
+
+    def missing(self):
+        return self.term.missing()
+
+    @simplified
+    def partial_eval(self):
+        return AbsOp(self.term.partial_eval())
 
 
 class AndOp(Expression):
@@ -3256,6 +3285,7 @@ builtin_ops = {
 }
 
 operators = {
+    "abs": AbsOp,
     "add": AddOp,
     "and": AndOp,
     "basic.add": BasicAddOp,

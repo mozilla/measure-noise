@@ -31,6 +31,9 @@ PERFHERDER_THRESHOLD_TYPE_ABS = 1
 
 
 def find_segments(values, diff_type, diff_threshold):
+    if len(values) == 0:
+        return (0,), (0,)
+
     values = np.array(values)
     logs = np.log(values)
     ranks = rankdata(values)
@@ -56,6 +59,7 @@ def find_segments(values, diff_type, diff_threshold):
     # SORT THE EDGE DETECTION
     segments = np.array([0, len(values)] + list(top_edges))
     segments = np.sort(segments)
+    diffs = [0] * len(segments)
 
     # CAN WE DO BETTER?
     for i, _ in enumerate(segments[:-2]):
@@ -65,31 +69,33 @@ def find_segments(values, diff_type, diff_threshold):
             # NO EVIDENCE OF DIFFERENCE, COLLAPSE SEGMENT
             segments[i + 1] = segments[i]
             continue
-        elif t_score.pvalue > P_THRESHOLD:
+        if t_score.pvalue > P_THRESHOLD:
             # NO EVIDENCE OF DIFFERENCE, COLLAPSE SEGMENT
             segments[i + 1] = segments[i]
             continue
-        elif (
-                diff_type == PERFHERDER_THRESHOLD_TYPE_ABS
-                and np.abs(np.median(values[s:best_mid]) - np.median(values[best_mid:e]))
-                < diff_threshold
-        ):
-            # DIFFERENCE IS TOO SMALL
-            segments[i + 1] = segments[i]
-            continue
-        elif (
-            np.abs(np.median(logs[s:best_mid]) - np.median(logs[best_mid:e]))
-            < diff_threshold / 100
-        ):
+        if diff_type == PERFHERDER_THRESHOLD_TYPE_ABS:
+            diff = np.abs(np.median(values[s:best_mid]) - np.median(values[best_mid:e]))
+            if diff <diff_threshold:
+                # DIFFERENCE IS TOO SMALL
+                segments[i + 1] = segments[i]
+                continue
+        diff = np.abs(np.median(logs[best_mid:e])/np.median(logs[s:best_mid]) - 1)
+
+        if diff < diff_threshold / 100:
             # DIFFERENCE IS TOO SMALL
             segments[i + 1] = segments[i]
             continue
 
         # LOOKS GOOD
         segments[i + 1] = best_mid
+        diffs[i + 1] = diff
 
-    segments = tuple(sorted(set(segments)))
-    return segments
+    segments, diffs = zip(*([(0, 0)]+[
+        (e, d)
+        for s, e, d in zip(segments, segments[1:], diffs[1:])
+        if s != e
+    ]))
+    return segments, diffs
 
 
 def filter_nearby_edges(edges):

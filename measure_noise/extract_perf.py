@@ -7,18 +7,17 @@ from pyLibrary.sql import SQL
 
 WORKLIST = SQL("""
     SELECT s.id 
-    FROM performance_datum d 
-    LEFT JOIN performance_signature s on s.id = d.signature_id
-    WHERE 
-        s.id=2153028
-        -- d.push_timestamp > DATE_ADD(DATE(NOW()), INTERVAL -30 DAY) and 
-        -- s.framework_id=10 and 
-        -- (s.test IS NULL or s.test='' or s.test=s.suite) and
-        -- s.repository_id <> 4  and -- try
-        -- s.repository_id <> 1  -- mozilla-central
+    FROM performance_signature s
+    WHERE
+        -- s.id=2153028
+        s.framework_id = 10 AND 
+        (s.test IS NULL or s.test='' or s.test=s.suite) and
+        s.repository_id = 77  AND -- autoland 
+        s.repository_id <> 4  AND -- try
+        s.repository_id <> 1  -- mozilla-central
     GROUP BY s.id 
-    ORDER BY s.last_updated DESC
-    LIMIT 100
+    -- ORDER BY s.last_updated DESC
+    -- LIMIT 1
 """)
 
 def get_worklist(db_config):
