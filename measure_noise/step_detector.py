@@ -14,6 +14,7 @@ MAX_POINTS = 50
 TOP_EDGES = 0.05  # NUMBER OF POINTS TO INVESTIGATE EDGES (PERCENT)
 JITTER = 20  # NUMBER OF SAMPLES (+/-) TO LOOK FOR BETTER EDGES
 
+EDGE_LIMIT = 60  # LOWER IS MORE SENSITIVE, BUT MORE WORK
 operator_scale = 5
 operator_length = 30
 forward = np.exp(-np.arange(operator_length) / operator_scale) / operator_scale
@@ -54,8 +55,10 @@ def find_segments(values, diff_type, diff_threshold):
     SHOW_CHARTS and plot(edge_detection, title="EDGES")
     # top_edges = edge_detection[np.abs(edge_detection)>0.2]
     edge_detection = np.abs(edge_detection)
+
+    edge_limit = EDGE_LIMIT / len(values)
     top_edges = np.argsort(-edge_detection)
-    top_edges = top_edges[edge_detection[top_edges] > 0.2]
+    top_edges = top_edges[edge_detection[top_edges] > edge_limit]
     top_edges = filter_nearby_edges(top_edges)
 
     # SORT THE EDGE DETECTION
@@ -76,12 +79,16 @@ def find_segments(values, diff_type, diff_threshold):
             segments[i + 1] = segments[i]
             continue
         if diff_type == PERFHERDER_THRESHOLD_TYPE_ABS:
-            diff_percent = np.abs(np.median(values[s:best_mid]) - np.median(values[best_mid:e]))
-            if diff_percent <diff_threshold:
+            diff_percent = np.abs(
+                np.median(values[s:best_mid]) - np.median(values[best_mid:e])
+            )
+            if diff_percent < diff_threshold:
                 # DIFFERENCE IS TOO SMALL
                 segments[i + 1] = segments[i]
                 continue
-        diff_percent = np.abs(np.median(values[best_mid:e])/np.median(values[s:best_mid]) - 1)
+        diff_percent = np.abs(
+            np.median(values[best_mid:e]) / np.median(values[s:best_mid]) - 1
+        )
 
         if diff_percent < diff_threshold / 100:
             # DIFFERENCE IS TOO SMALL
@@ -100,6 +107,8 @@ def find_segments(values, diff_type, diff_threshold):
 
 
 def filter_nearby_edges(edges):
+    if len(edges) == 0:
+        return edges
     last = edges[0]
     filter_edges = [last]
     for e in edges[1:]:
