@@ -215,7 +215,7 @@ def main():
 
     candidates = get_all_signatures(config.database, config.analysis.signatures_sql)
     if not config.args.now:
-        update_local_database(summary_table, candidates)
+        update_local_database()
 
     # DEVIANT
     if config.args.deviant:

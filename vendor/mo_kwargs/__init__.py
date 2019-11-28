@@ -76,11 +76,11 @@ def override(func):
 
         return update_wrapper(wo_kwargs, func)
 
-    elif func_name in ("__init__", "__new__") or params[0] == "self":
+    elif func_name in ("__init__", "__new__") or params[0] in ("self", "cls"):
         def w_bound_method(*args, **kwargs):
             if len(args) == 2 and len(kwargs) == 0 and is_data(args[1]):
                 # ASSUME SECOND UNNAMED PARAM IS kwargs
-                packed = params_pack(params, defaults, args[1], {"self": args[0]}, kwargs)
+                packed = params_pack(params, defaults, args[1], {params[0]: args[0]}, kwargs)
             elif KWARGS in kwargs and is_data(kwargs[KWARGS]):
                 # PUT args INTO kwargs
                 packed = params_pack(params, defaults, kwargs[KWARGS], dict_zip(params, args), kwargs)

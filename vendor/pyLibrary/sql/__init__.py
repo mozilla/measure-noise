@@ -184,9 +184,12 @@ SQL_LIKE = SQL(" LIKE ")
 SQL_ESCAPE = SQL(" ESCAPE ")
 SQL_OP = SQL("(")
 SQL_CP = SQL(")")
+SQL_IN = SQL(" IN ")
+SQL_GT = SQL(" > ")
+SQL_GE = SQL(" >= ")
 SQL_EQ = SQL(" = ")
-SQL_IN = SQL(" IN  ")
 SQL_LT = SQL(" < ")
+SQL_LE = SQL(" <= ")
 SQL_DOT = SQL(".")
 
 

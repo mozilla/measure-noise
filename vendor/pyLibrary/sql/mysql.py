@@ -255,7 +255,12 @@ class MySQL(object):
 
     def query(self, sql, param=None, stream=False, row_tuples=False):
         """
-        RETURN LIST OF dicts
+        RETURN A LIST OF dicts
+
+        :param sql:  SQL TEMPLATE TO SEND
+        :param param: PARAMETERS TO INJECT INTO SQL TEMPLATE
+        :param stream: STREAM OUTPUT
+        :param row_tuples: DO NOT RETURN dicts
         """
         if not self.cursor:  # ALLOW NON-TRANSACTIONAL READS
             Log.error("must perform all queries inside a transaction")
