@@ -5,7 +5,7 @@ from jx_python import jx
 from jx_sqlite.container import Container
 from measure_noise import deviance, step_detector
 from measure_noise.extract_perf import get_all_signatures, get_signature, get_dataum
-from measure_noise.step_detector import find_segments, MAX_POINTS
+from measure_noise.step_detector import find_segments, MAX_POINTS, MIN_POINTS
 from measure_noise.utils import assign_colors
 from mo_collections import left
 from mo_dots import Null, Data, coalesce, unwrap, listwrap
@@ -18,13 +18,13 @@ from mo_times.dates import parse
 
 IGNORE_TOP = 3  # WHEN CALCULATING NOISE OR DEVIANCE, IGNORE SOME EXTREME VALUES
 LOCAL_RETENTION = "3day"  # HOW LONG BEFORE WE REFRESH LOCAL DATABASE ENTRIES
+TOLLERANCE = MIN_POINTS  # WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
 
 
 config = Null
 local_container = Null
 summary_table = Null
 candidates = Null
-TOLLERANCE = 5  # WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
 
 
 def process(sig_id, show=False, show_limit=MAX_POINTS):
@@ -249,7 +249,7 @@ def main():
     show_sorted(
         sort={"value": {"abs": "max_extra_diff"}, "sort": "desc"},
         where={"lte": {"num_new_segments": 6}},
-        limit=config.args.exta
+        limit=config.args.extra
     )
 
     # MISSING
