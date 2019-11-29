@@ -4,6 +4,7 @@ from scipy.stats import stats, rankdata
 from measure_noise.utils import plot
 from mo_collections import not_right, not_left
 from mo_dots import Data
+from mo_math import ceiling
 
 SHOW_CHARTS = False
 
@@ -14,7 +15,7 @@ MAX_POINTS = 50
 TOP_EDGES = 0.05  # NUMBER OF POINTS TO INVESTIGATE EDGES (PERCENT)
 JITTER = 20  # NUMBER OF SAMPLES (+/-) TO LOOK FOR BETTER EDGES
 
-EDGE_LIMIT = 60  # LOWER IS MORE SENSITIVE, BUT MORE WORK
+EDGE_LIMIT = 100  # LOWER IS MORE SENSITIVE, BUT MORE WORK
 operator_scale = 5
 operator_length = 30
 forward = np.exp(-np.arange(operator_length) / operator_scale) / operator_scale
@@ -53,13 +54,16 @@ def find_segments(values, diff_type, diff_threshold):
     SHOW_CHARTS and plot(percentiles[operator_radius:-operator_radius], title="RANKS")
     edge_detection = np.convolve(percentiles, edge_operator, mode="valid")
     SHOW_CHARTS and plot(edge_detection, title="EDGES")
-    # top_edges = edge_detection[np.abs(edge_detection)>0.2]
     edge_detection = np.abs(edge_detection)
-
-    edge_limit = EDGE_LIMIT / len(values)
     top_edges = np.argsort(-edge_detection)
-    top_edges = top_edges[edge_detection[top_edges] > edge_limit]
-    top_edges = filter_nearby_edges(top_edges)
+
+    # PICK TOP EDGES BY BEING OVER A LIMIT, OR SOME PERCENTIL, WHICHERVER IS GREATEST
+    edge_limit = EDGE_LIMIT / len(values)  # SIZE OF EDGES ARE PROPTIONAL TO INVERSE OF len(values)
+    over_limit = np.max(np.argwhere(edge_detection[top_edges] > edge_limit), initial=0)
+    minimum_top_edges = ceiling(len(values) * TOP_EDGES)
+    cutoff = max(over_limit, minimum_top_edges)
+
+    top_edges = filter_nearby_edges(top_edges[:cutoff])
 
     # SORT THE EDGE DETECTION
     segments = np.array([0, len(values)] + list(top_edges))
@@ -109,14 +113,12 @@ def find_segments(values, diff_type, diff_threshold):
 def filter_nearby_edges(edges):
     if len(edges) == 0:
         return edges
-    last = edges[0]
-    filter_edges = [last]
+    filter_edges = edges[:1]
     for e in edges[1:]:
-        if e - MIN_POINTS <= last <= e + MIN_POINTS:
+        if np.any((filter_edges-MIN_POINTS <= e) & (e <= filter_edges+MIN_POINTS)):
             continue
-        filter_edges.append(e)
-        last = e
-    return np.array(filter_edges)
+        filter_edges = np.append(filter_edges, [e])
+    return filter_edges
 
 
 def cumvar(values):

@@ -201,12 +201,8 @@ class InsertTable(BaseTable):
         self.db.execute(command)
 
     def upsert(self, doc, where):
-        old_docs = self.where(where)
-        if len(old_docs) == 0:
-            self.insert([doc])
-        else:
-            self.delete(where)
-            self.insert([doc])
+        self.delete(where)
+        self.insert([doc])
 
     def flatten_many(self, docs, path="."):
         """

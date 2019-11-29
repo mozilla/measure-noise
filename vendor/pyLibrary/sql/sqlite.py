@@ -208,7 +208,7 @@ class Sqlite(DB):
                 if t.thread is thread:
                     parent = t
 
-        output = Transaction(self, parent=parent)
+        output = Transaction(self, parent=parent, thread=thread)
         self.available_transactions.append(output)
         return output
 
@@ -489,7 +489,7 @@ class Sqlite(DB):
 
 
 class Transaction(object):
-    def __init__(self, db, parent=None):
+    def __init__(self, db, parent, thread):
         self.db = db
         self.locker = Lock("transaction " + text(id(self)) + " todo lock")
         self.todo = []
@@ -497,7 +497,7 @@ class Transaction(object):
         self.end_of_life = False
         self.exception = None
         self.parent = parent
-        self.thread = parent.thread if parent else Thread.current()
+        self.thread = thread
 
     def __enter__(self):
         return self
@@ -516,7 +516,7 @@ class Transaction(object):
 
     def transaction(self):
         with self.db.locker:
-            output = Transaction(self.db, parent=self)
+            output = Transaction(self.db, parent=self, thread=self.thread)
             self.db.available_transactions.append(output)
         return output
 

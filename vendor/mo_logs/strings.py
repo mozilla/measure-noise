@@ -80,8 +80,13 @@ def datetime(value):
     else:
         value = milli2datetime(value)
 
-    return datetime2string(value, "%Y-%m-%d %H:%M:%S.%f").rstrip(".000000").rstrip("000")
-
+    output = datetime2string(value, "%Y-%m-%d %H:%M:%S.%f")
+    if output.endswith(".000000"):
+        return output[:-6]
+    elif output.endswith("000"):
+        return output[:-3]
+    else:
+        return output
 
 @formatter
 def unicode(value):

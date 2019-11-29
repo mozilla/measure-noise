@@ -24,6 +24,7 @@ config = Null
 local_container = Null
 summary_table = Null
 candidates = Null
+TOLLERANCE = 5  # WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
 
 
 def process(sig_id, show=False, show_limit=MAX_POINTS):
@@ -59,7 +60,7 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
     Log.note("With {{title}}", title=title)
 
     with Timer("find segments"):
-        new_segments, diffs = find_segments(
+        new_segments, new_diffs = find_segments(
             values, sig.alert_change_type, sig.alert_threshold
         )
 
@@ -76,6 +77,8 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
             )
         )
     )
+    old_medians = [0] + [np.median(values[s:e]) for s, e in zip(old_segments[:-1], old_segments[1:])]
+    old_diffs = np.array([b/a-1 for a, b in zip(old_medians[:-1], old_medians[1:])]+[0])
 
     if len(new_segments) == 1:
         dev_status = None
@@ -95,17 +98,27 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
             std=relative_noise,
         )
 
-    max_diff = None
+    max_extra_diff = None
+    max_missing_diff = None
     _is_diff = is_diff(new_segments, old_segments)
     if _is_diff:
         # FOR MISSING POINTS, CALC BIGGEST DIFF
-        max_diff = mo_math.MAX(
-            d
-            for s, d in zip(new_segments, diffs)
-            if all(not (s-2 <= o <= s+2)for o in old_segments)
+        max_extra_diff = mo_math.MAX(
+            abs(d)
+            for s, d in zip(new_segments, new_diffs)
+            if all(not (s-TOLLERANCE <= o <= s+TOLLERANCE)for o in old_segments)
+        )
+        max_missing_diff = mo_math.MAX(
+            abs(d)
+            for s, d in zip(old_segments, old_diffs)
+            if all(not (s-TOLLERANCE <= n <= s+TOLLERANCE) for n in new_segments)
         )
 
-        Log.alert("Disagree max_diff={{max_diff}}", max_diff=max_diff)
+        Log.alert(
+            "Disagree max_extra_diff={{max_extra_diff|round(places=3)}}, max_missing_diff={{max_missing_diff|round(places=3)}}",
+            max_extra_diff=max_extra_diff,
+            max_missing_diff=max_missing_diff
+        )
         Log.note("old={{old}}, new={{new}}", old=old_segments, new=new_segments)
         if show and len(pushes):
             assign_colors(values, old_segments, title="OLD " + title)
@@ -123,7 +136,8 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
             title=title,
             num_pushes=len(pushes),
             is_diff=_is_diff,
-            max_diff=max_diff,
+            max_extra_diff=max_extra_diff,
+            max_missing_diff=max_missing_diff,
             num_new_segments=len(new_segments),
             num_old_segments=len(old_segments),
             relative_noise=relative_noise,
@@ -139,7 +153,7 @@ def is_diff(A, B):
         return True
 
     for a, b in zip(A, B):
-        if b - 2 <= a <= b + 2:
+        if b - TOLLERANCE <= a <= b + TOLLERANCE:
             continue
         else:
             return True
@@ -231,10 +245,17 @@ def main():
         limit=config.args.noise
     )
 
+    # EXTRA
+    show_sorted(
+        sort={"value": {"abs": "max_extra_diff"}, "sort": "desc"},
+        where={"lte": {"num_new_segments": 6}},
+        limit=config.args.exta
+    )
+
     # MISSING
     show_sorted(
-        sort={"value": {"abs": "max_diff"}, "sort": "desc"},
-        where={"lte": {"num_new_segments": 6}},
+        sort={"value": {"abs": "max_missing_diff"}, "sort": "desc"},
+        where={"lte": {"num_old_segments": 6}},
         limit=config.args.missing
     )
 
@@ -280,8 +301,8 @@ if __name__ == "__main__":
                 "action": "store",
             },
             {
-                "name": ["--missing", "--miss", "-m"],
-                "dest": "missing",
+                "name": ["--extra", "-e"],
+                "dest": "extra",
                 "nargs": "?",
                 "const": 10,
                 "type": int,
@@ -289,10 +310,19 @@ if __name__ == "__main__":
                 "action": "store",
             },
             {
+                "name": ["--missing", "--miss", "-m"],
+                "dest": "missing",
+                "nargs": "?",
+                "const": 10,
+                "type": int,
+                "help": "show number of series which are missing alerts over perfherder",
+                "action": "store",
+            },
+            {
                 "name": ["--pathological", "--pathological", "--pathology", "-p"],
                 "dest": "pathological",
                 "nargs": "?",
-                "const": 10,
+                "const": 3,
                 "type": int,
                 "help": "show number of series that have most edges",
                 "action": "store",
