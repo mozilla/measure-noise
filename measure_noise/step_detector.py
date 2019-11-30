@@ -16,17 +16,17 @@ TOP_EDGES = 0.05  # NUMBER OF POINTS TO INVESTIGATE EDGES (PERCENT)
 JITTER = 20  # NUMBER OF SAMPLES (+/-) TO LOOK FOR BETTER EDGES
 
 EDGE_LIMIT = 100  # LOWER IS MORE SENSITIVE, BUT MORE WORK
-operator_scale = 5
-operator_length = 30
-forward = np.exp(-np.arange(operator_length) / operator_scale) / operator_scale
-edge_operator = np.concatenate(
+wavelet_scale = 5
+wavelet_length = 30
+forward = np.exp(-np.arange(wavelet_length) / wavelet_scale) / wavelet_scale
+edge_wavelet = np.concatenate(
     (
         -forward[::-1],  # exp(x)
         [0] * MIN_POINTS,  # ZERO IN THE MIDDLE?
         forward,  # exp(-x)
     )
 )
-operator_radius = len(edge_operator) // 2
+wavelet_radius = len(edge_wavelet) // 2
 
 PERFHERDER_THRESHOLD_TYPE_ABS = 1
 
@@ -44,16 +44,17 @@ def find_segments(values, diff_type, diff_threshold):
     percentiles = (
         np.concatenate(
             (
-                np.repeat(ranks[0], operator_radius),
+                np.repeat(ranks[0], wavelet_radius),
                 ranks,
-                np.repeat(ranks[-1], operator_radius),
+                np.repeat(ranks[-1], wavelet_radius),
             )
         )
         - 1
     ) / len(values)
-    SHOW_CHARTS and plot(percentiles[operator_radius:-operator_radius], title="RANKS")
-    edge_detection = np.convolve(percentiles, edge_operator, mode="valid")
+    SHOW_CHARTS and plot(percentiles[wavelet_radius:-wavelet_radius], title="RANKS")
+    edge_detection = np.convolve(percentiles, edge_wavelet, mode="valid")
     SHOW_CHARTS and plot(edge_detection, title="EDGES")
+    SHOW_CHARTS and plot(edge_wavelet, title="WAVELET")
     edge_detection = np.abs(edge_detection)
     top_edges = np.argsort(-edge_detection)
 

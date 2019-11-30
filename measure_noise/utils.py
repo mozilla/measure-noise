@@ -1,8 +1,14 @@
-from time import sleep
-
 import plotly.graph_objects as go
 
 from mo_math import mod
+
+
+def histogram(values, title=None):
+    fig = go.Figure(
+        go.Histogram(x=list(values))
+    )
+    fig.update_layout(title=title)
+    fig.show()
 
 
 def plot(data, title=None):
@@ -38,7 +44,6 @@ def assign_colors(values, segments, title):
 COLORS = [
     "red",
     "green",
-    "yellow",
     "blue",
     "purple",
     "pink",
@@ -46,4 +51,5 @@ COLORS = [
     "cyan",
     "brown",
     "black",
+    "yellow",
 ]

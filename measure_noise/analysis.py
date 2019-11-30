@@ -6,7 +6,7 @@ from jx_sqlite.container import Container
 from measure_noise import deviance, step_detector
 from measure_noise.extract_perf import get_all_signatures, get_signature, get_dataum
 from measure_noise.step_detector import find_segments, MAX_POINTS, MIN_POINTS
-from measure_noise.utils import assign_colors
+from measure_noise.utils import assign_colors, histogram
 from mo_collections import left
 from mo_dots import Null, Data, coalesce, unwrap, listwrap
 from mo_future import text, first
@@ -27,7 +27,7 @@ summary_table = Null
 candidates = Null
 
 
-def process(sig_id, show=False, show_limit=MAX_POINTS):
+def process(sig_id, show=False, show_limit=MAX_POINTS, show_old=True, show_distribution=None):
     if not mo_math.is_integer(sig_id):
         Log.error("expecting integer id")
     sig = first(get_signature(config.database, sig_id))
@@ -98,6 +98,9 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
             std=relative_noise,
         )
 
+        if show_distribution:
+            histogram(last_segment)
+
     max_extra_diff = None
     max_missing_diff = None
     _is_diff = is_diff(new_segments, old_segments)
@@ -121,12 +124,12 @@ def process(sig_id, show=False, show_limit=MAX_POINTS):
         )
         Log.note("old={{old}}, new={{new}}", old=old_segments, new=new_segments)
         if show and len(pushes):
-            assign_colors(values, old_segments, title="OLD " + title)
+            show_old and assign_colors(values, old_segments, title="OLD " + title)
             assign_colors(values, new_segments, title="NEW " + title)
     else:
         Log.note("Agree")
         if show and len(pushes):
-            assign_colors(values, old_segments, title="OLD " + title)
+            show_old and assign_colors(values, old_segments, title="OLD " + title)
             assign_colors(values, new_segments, title="NEW " + title)
 
     summary_table.upsert(
@@ -197,7 +200,7 @@ def update_local_database():
     Log.note("Local database is up to date")
 
 
-def show_sorted(sort, limit, where=True):
+def show_sorted(sort, limit, where=True, show_distribution=None, show_old=True):
     if not limit:
         return
     tops = summary_table.query(
@@ -213,7 +216,7 @@ def show_sorted(sort, limit, where=True):
     ).data
 
     for id in tops:
-        process(id, show=True)
+        process(id, show=True, show_distribution=show_distribution, show_old=show_old)
 
 
 def main():
@@ -236,7 +239,18 @@ def main():
     # DEVIANT
     show_sorted(
         sort={"value": {"abs": "dev_score"}, "sort": "desc"},
-        limit=config.args.deviant
+        limit=config.args.deviant,
+        show_old=False,
+        show_distribution=True
+    )
+
+    # MODAL
+    show_sorted(
+        sort={"value": {"abs": "dev_score"}, "sort": "desc"},
+        limit=config.args.modal,
+        where={"in":{"dev_status":["MODAL", "OUTLIERS"]}},
+        show_old=False,
+        show_distribution=True
     )
 
     # NOISE
@@ -289,6 +303,15 @@ if __name__ == "__main__":
                 "const": 10,
                 "type": int,
                 "help": "show number of top deviant series",
+                "action": "store",
+            },
+            {
+                "name": ["--modal"],
+                "dest": "modal",
+                "nargs": "?",
+                "const": 10,
+                "type": int,
+                "help": "show number of top modal series",
                 "action": "store",
             },
             {
