@@ -1,5 +1,6 @@
 # measure-noise
-Measure how our data deviates from normal distribution
+
+Measure how our data deviates from normal distribution. ([project summary](https://docs.google.com/document/d/1TMUhY4zaOA_DV6hzmNY3Z2v9Hm6XF3zlKvWOTRL4xJs/edit#))
 
 
 |Branch      |Status   | Coverage |

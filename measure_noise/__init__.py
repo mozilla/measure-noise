@@ -67,15 +67,15 @@ def deviance(samples):
             "skew={{skew}}  kurt={{kurt}}", skew=skew_normalized, kurt=kurt_normalized
         )
 
-    if abs(kurt_normalized) > PROBLEM_THRESHOLD:
-        if kurt < 0:
+    if abs(skew_normalized) > abs(kurt_normalized):
+        if abs(skew_normalized) > PROBLEM_THRESHOLD:
+            return "SKEWED", skew_normalized
+        else:
+            return "OK", skew_normalized
+    else:
+        if kurt_normalized > PROBLEM_THRESHOLD:
+            return "OUTLIERS", kurt_normalized
+        elif kurt_normalized<-PROBLEM_THRESHOLD:
             return "MODAL", kurt_normalized
         else:
-            return "OUTLIERS", kurt_normalized
-    if abs(skew_normalized) > PROBLEM_THRESHOLD:
-        return "SKEWED", skew_normalized
-
-    if abs(skew_normalized) > abs(kurt_normalized):
-        return "OK", skew_normalized
-    else:
-        return "OK", kurt_normalized
+            return "OK", kurt_normalized
