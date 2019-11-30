@@ -1,5 +1,6 @@
-import numpy
 from unittest import TestCase
+
+import numpy
 
 from measure_noise import deviance
 from tests import perfherder_alert, plot

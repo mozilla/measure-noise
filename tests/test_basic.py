@@ -1,12 +1,7 @@
-import os
 from unittest import TestCase
 
 from measure_noise import deviance
 from tests import plot
-
-
-IS_TRAVIS = os.environ.get("TRAVIS")
-SHOW_CHARTS = not IS_TRAVIS
 
 
 class TestBasic(TestCase):
@@ -17,7 +12,7 @@ class TestBasic(TestCase):
             323.5, 320.5, 328, 340.5, 339, 322, 350.5, 284.5, 331, 362,
             323.5, 323, 317.5, 338
         ]
-        SHOW_CHARTS and plot(data)
+        plot(data)
         description, scale = deviance(data)
         self.assertEqual(description, "OK")  # SINGLE-POINT ERRORS WILL NOT BE DETECTED
 
@@ -25,7 +20,7 @@ class TestBasic(TestCase):
             454, 751.5, 715, 731.5, 443, 425, 729.5, 709, 739.5, 733.5,
             791, 720.5
         ]
-        SHOW_CHARTS and plot(data)
+        plot(data)
         description, scale = deviance(data)
         self.assertEqual(description, "OK")
 
@@ -44,7 +39,7 @@ class TestBasic(TestCase):
             785.5, 418.5, 413, 418.5, 431, 425.5, 429, 419, 427.5, 428,
             429.5, 423.5, 430.5, 426, 423.5, 419, 795.5, 427.5, 422, 429.5
         ]
-        SHOW_CHARTS and plot(data)
+        plot(data)
         description, score = deviance(data)
         self.assertEqual(description, "OUTLIERS")
 
@@ -63,7 +58,7 @@ class TestBasic(TestCase):
             1189, 1186, 2320, 2312, 2400, 2321, 1170, 2318, 1209, 1270,
             2374, 2299, 1206, 1225, 2329, 2324, 1248, 2346, 2285, 2247
         ]
-        SHOW_CHARTS and plot(data)
+        plot(data)
         description, score = deviance(data)
         self.assertEqual(description, "MODAL")
 
@@ -80,7 +75,7 @@ class TestBasic(TestCase):
             453, 452.5, 390, 271, 271, 403, 462.5, 405, 403, 415.5,
             388, 264, 492.5, 435, 471.5, 457, 494, 427, 433, 431
         ]
-        SHOW_CHARTS and plot(data)
+        plot(data)
         description, score = deviance(data)
         self.assertEqual(description, "OK")
 
@@ -91,7 +86,7 @@ class TestBasic(TestCase):
             363, 362, 263, 355.5, 368.5, 374, 265, 328.5, 359.5, 369,
             368.5, 361.5, 369, 370.5, 364.5, 365, 339.5, 257, 372
         ]
-        SHOW_CHARTS and plot(data)
+        plot(data)
         description, score = deviance(data)
         self.assertEqual(description, "SKEWED")
 
@@ -118,7 +113,7 @@ class TestBasic(TestCase):
             229.5, 239.5, 248.5, 237.5, 244.5, 253, 236, 239.5, 245, 228,
             249, 246, 235, 234, 241, 240, 237.5, 245, 242.5, 249
         ]
-        SHOW_CHARTS and plot(data)
+        plot(data)
         description, score = deviance(data)
         self.assertEqual(description, "OK")
 
@@ -129,7 +124,7 @@ class TestBasic(TestCase):
             363, 362, 263, 355.5, 368.5, 374, 265, 328.5, 359.5, 369,
             368.5, 361.5, 369, 370.5, 364.5, 365, 339.5, 257, 372
         ]
-        SHOW_CHARTS and plot(data)
+        plot(data)
         description, score = deviance(data)
         self.assertEqual(description, "SKEWED")
 
@@ -152,6 +147,6 @@ class TestBasic(TestCase):
             3376, 3277, 3222, 3313, 3036, 3113, 3155, 3129, 3065, 3229,
             2969, 3016, 3116, 3015, 3204, 3000, 3318, 3125, 3329, 3055
         ]
-        SHOW_CHARTS and plot(data)
+        plot(data)
         description, score = deviance(data)
         self.assertEqual(description, "OK")

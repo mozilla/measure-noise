@@ -1,9 +1,12 @@
+import os
+
 import plotly.graph_objects as go
 
 from perfalert import RevisionDatum, detect_changes
 
 DEBUG = True
-SHOW_CHARTS =True
+IS_TRAVIS = os.environ.get("TRAVIS")
+SHOW_CHARTS = not IS_TRAVIS
 
 
 def plot(data):
