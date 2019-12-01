@@ -18,7 +18,9 @@ from mo_times.dates import parse
 
 IGNORE_TOP = 3  # WHEN CALCULATING NOISE OR DEVIANCE, IGNORE SOME EXTREME VALUES
 LOCAL_RETENTION = "3day"  # HOW LONG BEFORE WE REFRESH LOCAL DATABASE ENTRIES
-TOLLERANCE = MIN_POINTS  # WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
+TOLLERANCE = (
+    MIN_POINTS
+)  # WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
 
 
 config = Null
@@ -27,7 +29,9 @@ summary_table = Null
 candidates = Null
 
 
-def process(sig_id, show=False, show_limit=MAX_POINTS, show_old=True, show_distribution=None):
+def process(
+    sig_id, show=False, show_limit=MAX_POINTS, show_old=True, show_distribution=None
+):
     if not mo_math.is_integer(sig_id):
         Log.error("expecting integer id")
     sig = first(get_signature(config.database, sig_id))
@@ -36,11 +40,15 @@ def process(sig_id, show=False, show_limit=MAX_POINTS, show_old=True, show_distr
     min_date = (Date.today() - 3 * MONTH).unix
     pushes = jx.sort(
         [
-            {"value": median(rows.value), "runs": rows, "push": {"time": unwrap(t)["push.time"]}}
+            {
+                "value": median(rows.value),
+                "runs": rows,
+                "push": {"time": unwrap(t)["push.time"]},
+            }
             for t, rows in jx.groupby(data, "push.time")
             if t["push\\.time"] > min_date
         ],
-        "push.time"
+        "push.time",
     )
 
     values = pushes.value
@@ -68,17 +76,17 @@ def process(sig_id, show=False, show_limit=MAX_POINTS, show_old=True, show_distr
     old_segments = tuple(
         sorted(
             set(
-                [
-                    i
-                    for i, p in enumerate(pushes)
-                    if any(r.alert.id for r in p.runs)
-                ]
+                [i for i, p in enumerate(pushes) if any(r.alert.id for r in p.runs)]
                 + [0, len(pushes)]
             )
         )
     )
-    old_medians = [0] + [np.median(values[s:e]) for s, e in zip(old_segments[:-1], old_segments[1:])]
-    old_diffs = np.array([b/a-1 for a, b in zip(old_medians[:-1], old_medians[1:])]+[0])
+    old_medians = [0] + [
+        np.median(values[s:e]) for s, e in zip(old_segments[:-1], old_segments[1:])
+    ]
+    old_diffs = np.array(
+        [b / a - 1 for a, b in zip(old_medians[:-1], old_medians[1:])] + [0]
+    )
 
     if len(new_segments) == 1:
         dev_status = None
@@ -99,7 +107,7 @@ def process(sig_id, show=False, show_limit=MAX_POINTS, show_old=True, show_distr
         )
 
         if show_distribution:
-            histogram(last_segment)
+            histogram(last_segment, title=dev_status+"="+text(dev_score))
 
     max_extra_diff = None
     max_missing_diff = None
@@ -109,18 +117,18 @@ def process(sig_id, show=False, show_limit=MAX_POINTS, show_old=True, show_distr
         max_extra_diff = mo_math.MAX(
             abs(d)
             for s, d in zip(new_segments, new_diffs)
-            if all(not (s-TOLLERANCE <= o <= s+TOLLERANCE)for o in old_segments)
+            if all(not (s - TOLLERANCE <= o <= s + TOLLERANCE) for o in old_segments)
         )
         max_missing_diff = mo_math.MAX(
             abs(d)
             for s, d in zip(old_segments, old_diffs)
-            if all(not (s-TOLLERANCE <= n <= s+TOLLERANCE) for n in new_segments)
+            if all(not (s - TOLLERANCE <= n <= s + TOLLERANCE) for n in new_segments)
         )
 
         Log.alert(
             "Disagree max_extra_diff={{max_extra_diff|round(places=3)}}, max_missing_diff={{max_missing_diff|round(places=3)}}",
             max_extra_diff=max_extra_diff,
-            max_missing_diff=max_missing_diff
+            max_missing_diff=max_missing_diff,
         )
         Log.note("old={{old}}, new={{new}}", old=old_segments, new=new_segments)
         if show and len(pushes):
@@ -182,10 +190,13 @@ def update_local_database():
     Log.alert("{{num}} series are candidates for local update", num=len(needs_update))
 
     limited_update = Queue("sigs")
-    limited_update.extend(left(needs_update, coalesce(config.analysis.download_limit, 100)))
+    limited_update.extend(
+        left(needs_update, coalesce(config.analysis.download_limit, 100))
+    )
     Log.alert("Updating local database with {{num}} series", num=len(limited_update))
 
     with Timer("Updating local database"):
+
         def loop(please_stop):
             while not please_stop:
                 sig_id = limited_update.pop_one()
@@ -207,7 +218,8 @@ def show_sorted(sort, limit, where=True, show_distribution=None, show_old=True):
         {
             "select": "id",
             "where": {
-                "and": [{"in": {"id": candidates.id}}, {"gte": {"num_pushes": 1}}]+listwrap(where)
+                "and": [{"in": {"id": candidates.id}}, {"gte": {"num_pushes": 1}}]
+                + listwrap(where)
             },
             "sort": sort,
             "limit": limit,
@@ -226,7 +238,7 @@ def main():
 
     if config.args.id:
         # EXIT EARLY AFTER WE GOT THE SPECIFIC IDS
-        if len(config.args.id)<4:
+        if len(config.args.id) < 4:
             step_detector.SHOW_CHARTS = True
         for id in config.args.id:
             process(id, show=True)
@@ -241,42 +253,65 @@ def main():
         sort={"value": {"abs": "dev_score"}, "sort": "desc"},
         limit=config.args.deviant,
         show_old=False,
-        show_distribution=True
+        show_distribution=True,
     )
 
     # MODAL
     show_sorted(
-        sort={"value": {"abs": "dev_score"}, "sort": "desc"},
+        sort="dev_score",
         limit=config.args.modal,
-        where={"in":{"dev_status":["MODAL", "OUTLIERS"]}},
-        show_old=False,
-        show_distribution=True
+        where={"eq": {"dev_status": "MODAL"}},
+        show_distribution=True,
+    )
+
+    # OUTLIERS
+    show_sorted(
+        sort={"value": "dev_score", "sort": "desc"},
+        limit=config.args.outliers,
+        where={"eq": {"dev_status": "OUTLIERS"}},
+        show_distribution=True,
+    )
+
+    # SKEWED
+    show_sorted(
+        sort={"value": {"abs": "dev_score"}, "sort": "desc"},
+        limit=config.args.skewed,
+        where={"eq": {"dev_status": "SKEWED"}},
+        show_distribution=True,
+    )
+
+    # OK
+    show_sorted(
+        sort={"value": {"abs": "dev_score"}, "sort": "desc"},
+        limit=config.args.ok,
+        where={"eq": {"dev_status": "OK"}},
+        show_distribution=True,
     )
 
     # NOISE
     show_sorted(
         sort={"value": {"abs": "relative_noise"}, "sort": "desc"},
-        limit=config.args.noise
+        limit=config.args.noise,
     )
 
     # EXTRA
     show_sorted(
         sort={"value": {"abs": "max_extra_diff"}, "sort": "desc"},
         where={"lte": {"num_new_segments": 6}},
-        limit=config.args.extra
+        limit=config.args.extra,
     )
 
     # MISSING
     show_sorted(
         sort={"value": {"abs": "max_missing_diff"}, "sort": "desc"},
         where={"lte": {"num_old_segments": 6}},
-        limit=config.args.missing
+        limit=config.args.missing,
     )
 
     # PATHOLOGICAL
     show_sorted(
         sort={"value": "num_new_segments", "sort": "desc"},
-        limit=config.args.pathological
+        limit=config.args.pathological,
     )
 
 
@@ -315,6 +350,33 @@ if __name__ == "__main__":
                 "action": "store",
             },
             {
+                "name": ["--outliers"],
+                "dest": "outliers",
+                "nargs": "?",
+                "const": 10,
+                "type": int,
+                "help": "show number of top outliers series",
+                "action": "store",
+            },
+            {
+                "name": ["--skewed", "--skew"],
+                "dest": "skewed",
+                "nargs": "?",
+                "const": 10,
+                "type": int,
+                "help": "show number of top skewed series",
+                "action": "store",
+            },
+            {
+                "name": ["--ok"],
+                "dest": "ok",
+                "nargs": "?",
+                "const": 10,
+                "type": int,
+                "help": "show number of top worst OK series",
+                "action": "store",
+            },
+            {
                 "name": ["--noise", "--noisy"],
                 "dest": "noise",
                 "nargs": "?",
@@ -350,8 +412,6 @@ if __name__ == "__main__":
                 "help": "show number of series that have most edges",
                 "action": "store",
             },
-
-
         ]
     )
     constants.set(config.constants)

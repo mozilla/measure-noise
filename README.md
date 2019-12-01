@@ -72,7 +72,12 @@ Some other options are
 * `--id` - show specific signature_ids
 * `--now` - Do not update local database, just show worst series right now
 * `--deviant=<int>` - Show number of series with most deviant noise 
+* `--outliers=<int>` - Show number of series with most outliers noise 
+* `--modal=<int>` - Show number of series that seem bi-modal 
+* `--skewed=<int>` - Show number of series where mean and median differ 
+* `--ok=<int>` - Show number of series that are worst, but good enough 
 * `--noise=<int>` - Show number of series with largest relative standard deviation
+* `--extra=<int>` - Show number of series where Perfherder has detected steps, but not MWU
 * `--missing=<int>` - Show number of series where Perfherder missed alerting
 
 ## Post Analysis

@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
 from scipy.stats import stats, rankdata
 
 from measure_noise.utils import plot
@@ -9,24 +10,20 @@ from mo_math import ceiling
 SHOW_CHARTS = False
 
 
-P_THRESHOLD = pow(10, -4)
+THRESHOLD = 4
+P_THRESHOLD = pow(10, -THRESHOLD)
 MIN_POINTS = 6
 MAX_POINTS = 50
 TOP_EDGES = 0.05  # NUMBER OF POINTS TO INVESTIGATE EDGES (PERCENT)
 JITTER = 20  # NUMBER OF SAMPLES (+/-) TO LOOK FOR BETTER EDGES
 
-EDGE_LIMIT = 100  # LOWER IS MORE SENSITIVE, BUT MORE WORK
-wavelet_scale = 5
-wavelet_length = 30
-forward = np.exp(-np.arange(wavelet_length) / wavelet_scale) / wavelet_scale
-edge_wavelet = np.concatenate(
-    (
-        -forward[::-1],  # exp(x)
-        [0] * MIN_POINTS,  # ZERO IN THE MIDDLE?
-        forward,  # exp(-x)
-    )
-)
-wavelet_radius = len(edge_wavelet) // 2
+weight_scale = 5
+weight_length = 30
+forward = np.exp(-np.arange(weight_length) / weight_scale) / weight_scale
+median_weight = np.array(list(forward[::-1]) + list(forward))
+weight_radius = len(median_weight) // 2
+
+SHOW_CHARTS and plot(median_weight, title="WEIGHT")
 
 PERFHERDER_THRESHOLD_TYPE_ABS = 1
 
@@ -44,23 +41,24 @@ def find_segments(values, diff_type, diff_threshold):
     percentiles = (
         np.concatenate(
             (
-                np.repeat(ranks[0], wavelet_radius),
+                np.repeat(ranks[0], weight_radius),
                 ranks,
-                np.repeat(ranks[-1], wavelet_radius),
+                np.repeat(ranks[-1], weight_radius),
             )
         )
         - 1
     ) / len(values)
-    SHOW_CHARTS and plot(percentiles[wavelet_radius:-wavelet_radius], title="RANKS")
-    edge_detection = np.convolve(percentiles, edge_wavelet, mode="valid")
-    SHOW_CHARTS and plot(edge_detection, title="EDGES")
-    SHOW_CHARTS and plot(edge_wavelet, title="WAVELET")
-    edge_detection = np.abs(edge_detection)
+    SHOW_CHARTS and plot(percentiles[weight_radius:-weight_radius], title="RANKS")
+    mwus = sliding_MWU(values)
+    edge_detection = -np.log10(mwus[:, 1])
+    # edge_detection = np.convolve(percentiles, edge_wavelet, mode="valid")
+    SHOW_CHARTS and plot(edge_detection, title="EDGES -log10(p_value)")
     top_edges = np.argsort(-edge_detection)
 
-    # PICK TOP EDGES BY BEING OVER A LIMIT, OR SOME PERCENTIL, WHICHERVER IS GREATEST
-    edge_limit = EDGE_LIMIT / len(values)  # SIZE OF EDGES ARE PROPTIONAL TO INVERSE OF len(values)
-    over_limit = np.max(np.argwhere(edge_detection[top_edges] > edge_limit), initial=0)
+    # PICK TOP EDGES BY BEING OVER A LIMIT, OR SOME PERCENTILE, WHICHERVER IS GREATEST
+    over_limit = np.max(
+        np.argwhere(edge_detection[top_edges] > THRESHOLD / 2), initial=0
+    )
     minimum_top_edges = ceiling(len(values) * TOP_EDGES)
     cutoff = max(over_limit, minimum_top_edges)
 
@@ -76,10 +74,6 @@ def find_segments(values, diff_type, diff_threshold):
         s, m, e = segments[i], segments[i + 1], segments[i + 2]
         m_score, t_score, best_mid = jitter_MWU(logs, s, m, e)
         if m_score.pvalue > P_THRESHOLD:
-            # NO EVIDENCE OF DIFFERENCE, COLLAPSE SEGMENT
-            segments[i + 1] = segments[i]
-            continue
-        if t_score.pvalue > P_THRESHOLD:
             # NO EVIDENCE OF DIFFERENCE, COLLAPSE SEGMENT
             segments[i + 1] = segments[i]
             continue
@@ -116,7 +110,7 @@ def filter_nearby_edges(edges):
         return edges
     filter_edges = edges[:1]
     for e in edges[1:]:
-        if np.any((filter_edges-MIN_POINTS <= e) & (e <= filter_edges+MIN_POINTS)):
+        if np.any((filter_edges - MIN_POINTS <= e) & (e <= filter_edges + MIN_POINTS)):
             continue
         filter_edges = np.append(filter_edges, [e])
     return filter_edges
@@ -193,3 +187,40 @@ def jitter_MWU(values, start, mid, end):
     best = np.argmin(pvalue)
 
     return Data(pvalue=m_score[best, 1]), Data(pvalue=t_score[best, 1]), mids[best]
+
+
+def sliding_MWU(values):
+    """
+    RETURN
+    :param values:
+    :return:
+    """
+    # ADD MEDIAN TO EITHER SIDE OF values
+    prefix = [np.median(values[: i + weight_radius]) for i in range(weight_radius)]
+    suffix = [
+        np.median(values[-i - weight_radius:])
+        for i in reversed(range(weight_radius))
+    ]
+    combined = np.array(prefix + list(values) + suffix)
+    b = combined.itemsize
+    window = as_strided(
+        combined, shape=(len(values), weight_radius * 2), strides=(b, b)
+    )
+
+    med = (len(median_weight) + 1) / 2
+    m_score = np.array(
+        [
+            stats.mannwhitneyu(
+                w[:weight_radius],
+                w[-weight_radius:],
+                use_continuity=True,
+                alternative="two-sided",
+            )
+            for v in window
+            for r in [rankdata(v)]
+            for w in [r * median_weight + med * (1 - median_weight)]
+        ]
+    )
+
+    return m_score
+

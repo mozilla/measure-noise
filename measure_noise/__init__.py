@@ -7,7 +7,7 @@ from numpy import log, mean, stack, var
 from scipy.stats import kurtosis, skew
 
 DEBUG = False
-PROBLEM_THRESHOLD = 3.0  # NUMBER OF STANDRAD DEVIATIONS BEFORE A PROBLEM IS HIGHLIGHTED
+PROBLEM_THRESHOLD = 2.5  # NUMBER OF STANDARD DEVIATIONS BEFORE A PROBLEM IS HIGHLIGHTED
 
 
 def moments(samples):
@@ -63,10 +63,12 @@ def deviance(samples):
 
     if DEBUG:
         from mo_logs import Log
+
         Log.note(
             "skew={{skew}}  kurt={{kurt}}", skew=skew_normalized, kurt=kurt_normalized
         )
 
+    # REPORT THE WORST NUMBER
     if abs(skew_normalized) > abs(kurt_normalized):
         if abs(skew_normalized) > PROBLEM_THRESHOLD:
             return "SKEWED", skew_normalized
@@ -75,7 +77,7 @@ def deviance(samples):
     else:
         if kurt_normalized > PROBLEM_THRESHOLD:
             return "OUTLIERS", kurt_normalized
-        elif kurt_normalized<-PROBLEM_THRESHOLD:
+        elif kurt_normalized < -PROBLEM_THRESHOLD:
             return "MODAL", kurt_normalized
         else:
             return "OK", kurt_normalized
