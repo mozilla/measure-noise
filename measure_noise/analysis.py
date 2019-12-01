@@ -297,7 +297,7 @@ def main():
     # EXTRA
     show_sorted(
         sort={"value": {"abs": "max_extra_diff"}, "sort": "desc"},
-        where={"lte": {"num_new_segments": 6}},
+        where={"lte": {"num_new_segments": 7}},
         limit=config.args.extra,
     )
 

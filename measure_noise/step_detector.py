@@ -57,7 +57,7 @@ def find_segments(values, diff_type, diff_threshold):
 
     # PICK TOP EDGES BY BEING OVER A LIMIT, OR SOME PERCENTILE, WHICHERVER IS GREATEST
     over_limit = np.max(
-        np.argwhere(edge_detection[top_edges] > THRESHOLD / 2), initial=0
+        np.argwhere(edge_detection[top_edges] > THRESHOLD / 3), initial=0
     )
     minimum_top_edges = ceiling(len(values) * TOP_EDGES)
     cutoff = max(over_limit, minimum_top_edges)
@@ -218,7 +218,7 @@ def sliding_MWU(values):
             )
             for v in window
             for r in [rankdata(v)]
-            for w in [r * median_weight + med * (1 - median_weight)]
+            for w in [(r - med) * median_weight]
         ]
     )
 
