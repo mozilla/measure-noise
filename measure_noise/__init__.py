@@ -3,15 +3,15 @@ from __future__ import division, unicode_literals
 
 from math import sqrt
 
-from numpy import log, mean, stack, var
+from numpy import log, mean, array, var
 from scipy.stats import kurtosis, skew
 
 DEBUG = False
-PROBLEM_THRESHOLD = 2.5  # NUMBER OF STANDARD DEVIATIONS BEFORE A PROBLEM IS HIGHLIGHTED
+PROBLEM_THRESHOLD = 3  # NUMBER OF STANDARD DEVIATIONS BEFORE A PROBLEM IS HIGHLIGHTED
 
 
 def moments(samples):
-    data = stack(samples)
+    data = array(samples)
     return (len(data), mean(data), sqrt(var(data)), skew(data), kurtosis(data))
 
 

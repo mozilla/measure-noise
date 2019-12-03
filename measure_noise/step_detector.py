@@ -36,33 +36,13 @@ def find_segments(values, diff_type, diff_threshold):
     logs = np.log(values)
     ranks = rankdata(values)
 
-    # ADD SOME EXTRA DATA TO EDGES TO MINIMIZE EDGE ARTIFACTS
-    # CONVERT RANK TO PERCENTILE
-    percentiles = (
-        np.concatenate(
-            (
-                np.repeat(ranks[0], weight_radius),
-                ranks,
-                np.repeat(ranks[-1], weight_radius),
-            )
-        )
-        - 1
-    ) / len(values)
-    SHOW_CHARTS and plot(percentiles[weight_radius:-weight_radius], title="RANKS")
+    SHOW_CHARTS and plot(ranks/len(values), title="RANKS")
     mwus = sliding_MWU(values)
     edge_detection = -np.log10(mwus[:, 1])
     # edge_detection = np.convolve(percentiles, edge_wavelet, mode="valid")
     SHOW_CHARTS and plot(edge_detection, title="EDGES -log10(p_value)")
     top_edges = np.argsort(-edge_detection)
-
-    # PICK TOP EDGES BY BEING OVER A LIMIT, OR SOME PERCENTILE, WHICHERVER IS GREATEST
-    over_limit = np.max(
-        np.argwhere(edge_detection[top_edges] > THRESHOLD / 3), initial=0
-    )
-    minimum_top_edges = ceiling(len(values) * TOP_EDGES)
-    cutoff = max(over_limit, minimum_top_edges)
-
-    top_edges = filter_nearby_edges(top_edges[:cutoff])
+    top_edges = filter_nearby_edges(top_edges[edge_detection[top_edges] > THRESHOLD / 3])
 
     # SORT THE EDGE DETECTION
     segments = np.array([0, len(values)] + list(top_edges))
