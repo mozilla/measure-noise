@@ -1,8 +1,2 @@
-mo-future
-mo-dots
-jx_python
-pyLibrary
-mo-files
-mo-logs
 plotly
 matplotlib

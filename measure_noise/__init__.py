@@ -3,15 +3,15 @@ from __future__ import division, unicode_literals
 
 from math import sqrt
 
-from numpy import log, mean, stack, var
+from numpy import log, mean, array, var
 from scipy.stats import kurtosis, skew
 
 DEBUG = False
-PROBLEM_THRESHOLD = 3.0  # NUMBER OF STANDRAD DEVIATIONS BEFORE A PROBLEM IS HIGHLIGHTED
+PROBLEM_THRESHOLD = 3  # NUMBER OF STANDARD DEVIATIONS BEFORE A PROBLEM IS HIGHLIGHTED
 
 
 def moments(samples):
-    data = stack(samples)
+    data = array(samples)
     return (len(data), mean(data), sqrt(var(data)), skew(data), kurtosis(data))
 
 
@@ -63,16 +63,21 @@ def deviance(samples):
 
     if DEBUG:
         from mo_logs import Log
+
         Log.note(
             "skew={{skew}}  kurt={{kurt}}", skew=skew_normalized, kurt=kurt_normalized
         )
 
-    if abs(skew_normalized) > PROBLEM_THRESHOLD:
-        return "SKEWED", skew_normalized
-    if abs(kurt_normalized) > PROBLEM_THRESHOLD:
-        if kurt < 0:
+    # REPORT THE WORST NUMBER
+    if abs(skew_normalized) > abs(kurt_normalized):
+        if abs(skew_normalized) > PROBLEM_THRESHOLD:
+            return "SKEWED", skew_normalized
+        else:
+            return "OK", skew_normalized
+    else:
+        if kurt_normalized > PROBLEM_THRESHOLD:
+            return "OUTLIERS", kurt_normalized
+        elif kurt_normalized < -PROBLEM_THRESHOLD:
             return "MODAL", kurt_normalized
         else:
-            return "OUTLIERS", kurt_normalized
-
-    return "OK", 0
+            return "OK", kurt_normalized

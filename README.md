@@ -1,5 +1,6 @@
 # measure-noise
-Measure how our data deviates from normal distribution
+
+Measure how our data deviates from normal distribution. ([project summary](https://docs.google.com/document/d/1TMUhY4zaOA_DV6hzmNY3Z2v9Hm6XF3zlKvWOTRL4xJs/edit#))
 
 
 |Branch      |Status   | Coverage |
@@ -35,8 +36,54 @@ The `deviance()` method will return a `(description, score)` pair describing how
     git clone https://github.com/mozilla/measure-noise.git
     cd measure-noise
     pip install -r requirements.txt
-    pip install or tests/requirements.txt
+    pip install -r tests/requirements.txt
     python -m unittest discover tests 
+
+---------------------
+
+## Analysis Configuration
+
+The analysis requires a connection to a Treeherder database. The `config.json` file points to a `private.json` file with all the secrets:
+
+```javascript
+// Example contents of ~/private.json
+{
+    "treeherder": {
+        "host": "treeherder-prod-ro.cd3i3txkp6c6.us-east-1.rds.amazonaws.com",
+        "port" : 3306,
+        "username": "activedata2",
+        "password": "password"
+    }
+}
+```
+
+You may make your own copy of the `config.json` with references to wherever your secrets are.  If you put it in `/resources`, then you may make a PR with it. Remember, **never put secrets in your project directory**; use references to secrets instead.   
+
+> You may use `{"$ref":"env://MY_ENV_VARIABLE"}` to use environment variables. [More details](https://github.com/klahnakoski/mo-json-config#environment-variables-reference) 
+
+## Running Analysis
+
+Run with the config parameter 
+
+    analysis.py --config=resources/kyle_config.json
+
+Some other options are 
+
+* `--id` - show specific signature_ids
+* `--now` - Do not update local database, just show worst series right now
+* `--deviant=<int>` - Show number of series with most deviant noise 
+* `--outliers=<int>` - Show number of series with most outliers noise 
+* `--modal=<int>` - Show number of series that seem bi-modal 
+* `--skewed=<int>` - Show number of series where mean and median differ 
+* `--ok=<int>` - Show number of series that are worst, but good enough 
+* `--noise=<int>` - Show number of series with largest relative standard deviation
+* `--extra=<int>` - Show number of series where Perfherder has detected steps, but not MWU
+* `--missing=<int>` - Show number of series where Perfherder missed alerting
+
+## Post Analysis
+
+The `analysis.py` fills a local Sqlite database (as per the config file). It can be used to lookup other series that may be of interest, or to feed yet-another-program.
+
 
 ## Windows
 

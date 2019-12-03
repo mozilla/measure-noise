@@ -41,7 +41,7 @@ class TestBasic(TestCase):
         ]
         plot(data)
         description, score = deviance(data)
-        self.assertEqual(description, "SKEWED")
+        self.assertEqual(description, "OUTLIERS")
 
     def test_bimodal(self):
         data = [

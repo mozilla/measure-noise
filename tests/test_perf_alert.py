@@ -1,5 +1,6 @@
-import numpy
 from unittest import TestCase
+
+import numpy
 
 from measure_noise import deviance
 from tests import perfherder_alert, plot
@@ -40,4 +41,4 @@ class TestPerfAlert(TestCase):
         self.assertTrue(alert)
 
         desc, score = deviance(list(post_samples) + list(resume_samples))
-        self.assertEqual("SKEWED", desc)
+        self.assertEqual("OUTLIERS", desc)

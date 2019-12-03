@@ -1,0 +1,43 @@
+{
+    "database": {
+        "schema": "treeherder",
+        "username": "activedata2",
+        "ssl": {
+            "ca": "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
+        },
+        "$ref": "~/private.json#treeherder",
+        "debug": false
+    },
+    "analysis": {
+        "download_limit": 1000,
+        "local_db": {
+            "filename": "perf_summary.sqlite",
+            "debug": false
+        },
+        "signatures_sql": {
+            "$concat": [
+                "SELECT s.id",
+                "FROM performance_signature s",
+                "WHERE",
+                "s.framework_id = 10 AND",
+                "(s.should_alert is NULL or s.should_alert <> 0) AND",
+                "(s.test IS NULL or s.test='' or s.test=s.suite) AND",
+                "s.repository_id = 77  -- autoland",
+                "GROUP BY s.id"
+            ],
+            "separator": "\n"
+        }
+    },
+    "constants": {
+        "pyLibrary.env.http.default_headers": {
+            "Referer": "https://github.com/mozilla/measure-noise"
+        },
+        "measure_noise.step_detector.SHOW_CHARTS": false
+    },
+    "debug": {
+        "trace": true,
+        "cprofile": false
+    }
+}
+
+
