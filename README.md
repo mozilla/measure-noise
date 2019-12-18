@@ -37,6 +37,7 @@ The `deviance()` method will return a `(description, score)` pair describing how
     cd measure-noise
     pip install -r requirements.txt
     pip install -r tests/requirements.txt
+    export PYTHONPATH=.:vendor
     python -m unittest discover tests 
 
 ---------------------
@@ -65,7 +66,8 @@ You may make your own copy of the `config.json` with references to wherever your
 
 Run with the config parameter 
 
-    analysis.py --config=resources/kyle_config.json
+    export PYTHONPATH=.:vendor
+    python analysis.py --config=resources/kyle_config.json
 
 Some other options are 
 
