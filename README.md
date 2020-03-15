@@ -90,3 +90,7 @@ The `analysis.py` fills a local Sqlite database (as per the config file). It can
 ## Windows
 
 You must download the `scipy` and `numpy` binary packages. 
+
+## License
+
+This module is licensed under the [Mozilla Public License, version 2.0](/LICENSE).
