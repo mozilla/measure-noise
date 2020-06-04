@@ -40,6 +40,8 @@ The `deviance()` method will return a `(description, score)` pair describing how
     export PYTHONPATH=.:vendor
     python -m unittest discover tests 
 
+> **Please note** - Windows requires semicolon separator: `export PYTHONPATH=.;vendor` 
+
 ---------------------
 
 ## Analysis Configuration
