@@ -186,7 +186,7 @@ def update_local_database():
     missing = list(set(candidates.id) - set(exists.id))
 
     too_old = Date.today() - parse(LOCAL_RETENTION)
-    needs_update = missing + [e for e in exists if e.last_updated < too_old.unix]
+    needs_update = missing + [e.id for e in exists if e.last_updated < too_old.unix]
     Log.alert("{{num}} series are candidates for local update", num=len(needs_update))
 
     limited_update = Queue("sigs")

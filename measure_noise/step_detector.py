@@ -5,6 +5,7 @@ from scipy.stats import stats, rankdata
 from measure_noise.utils import plot
 from mo_collections import not_right, not_left
 from mo_dots import Data
+from mo_logs import Except
 from mo_math import ceiling
 
 SHOW_CHARTS = False
@@ -127,28 +128,35 @@ def jitter_MWU(values, start, mid, end):
     mids = np.array(range(m_start, m_end))
 
     # MWU SCORES
-    m_score = np.array(
-        [
-            stats.mannwhitneyu(
-                values[max(start, m - MAX_POINTS) : m],
-                values[m : min(end, m + MAX_POINTS)],
-                use_continuity=True,
-                alternative="two-sided",
-            )
-            for m in mids
-        ]
-    )
+    try:
+        m_score = np.array(
+            [
+                stats.mannwhitneyu(
+                    values[max(start, m - MAX_POINTS) : m],
+                    values[m : min(end, m + MAX_POINTS)],
+                    use_continuity=True,
+                    alternative="two-sided",
+                )
+                for m in mids
+            ]
+        )
 
-    t_score = np.array(
-        [
-            stats.ttest_ind(
-                values[max(start, m - MAX_POINTS) : m],
-                values[m : min(end, m + MAX_POINTS)],
-                equal_var=False,
-            )
-            for m in mids
-        ]
-    )
+        t_score = np.array(
+            [
+                stats.ttest_ind(
+                    values[max(start, m - MAX_POINTS) : m],
+                    values[m : min(end, m + MAX_POINTS)],
+                    equal_var=False,
+                )
+                for m in mids
+            ]
+        )
+
+    except Exception as e:
+        e = Except.wrap(e)
+        if "All numbers are identical" in e:
+            Data(pvalue=0), Data(pvalue=0), mids[0]
+
 
     # TOTAL SUM-OF-SQUARES
     if m_start - start == 0:

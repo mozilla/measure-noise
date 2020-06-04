@@ -48,7 +48,7 @@ Similar for Windows:
     cd measure-noise
     pip install -r requirements.txt
     pip install -r tests\requirements.txt
-    export PYTHONPATH=.;vendor
+    set PYTHONPATH=.;vendor
     python -m unittest discover tests 
 
 
@@ -81,12 +81,12 @@ Ensure you are in the main project directory, and point to your config file
 **Linux/OSX**
 
     export PYTHONPATH=.:vendor
-    python analysis.py --config=resources/kyle_config.json
+    python measure_noise/analysis.py --config=resources/kyle_config.json
 
 **Windows**
 
-    export PYTHONPATH=.;vendor
-    python analysis.py --config=resources/kyle_config.json
+    set PYTHONPATH=.;vendor
+    python measure_noise\analysis.py --config=resources\kyle_config.json
 
 
 Some other options are 
