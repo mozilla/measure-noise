@@ -33,6 +33,8 @@ The `deviance()` method will return a `(description, score)` pair describing how
 
 ## Development
 
+For Linux/OSX
+
     git clone https://github.com/mozilla/measure-noise.git
     cd measure-noise
     pip install -r requirements.txt
@@ -40,7 +42,15 @@ The `deviance()` method will return a `(description, score)` pair describing how
     export PYTHONPATH=.:vendor
     python -m unittest discover tests 
 
-> **Please note** - Windows requires semicolon separator: `export PYTHONPATH=.;vendor` 
+Similar for Windows:
+
+    git clone https://github.com/mozilla/measure-noise.git
+    cd measure-noise
+    pip install -r requirements.txt
+    pip install -r tests\requirements.txt
+    export PYTHONPATH=.;vendor
+    python -m unittest discover tests 
+
 
 ---------------------
 
@@ -66,10 +76,18 @@ You may make your own copy of the `config.json` with references to wherever your
 
 ## Running Analysis
 
-Run with the config parameter 
+Ensure you are in the main project directory, and point to your config file 
+
+**Linux/OSX**
 
     export PYTHONPATH=.:vendor
     python analysis.py --config=resources/kyle_config.json
+
+**Windows**
+
+    export PYTHONPATH=.;vendor
+    python analysis.py --config=resources/kyle_config.json
+
 
 Some other options are 
 
