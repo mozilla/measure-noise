@@ -155,8 +155,8 @@ def jitter_MWU(values, start, mid, end):
     except Exception as e:
         e = Except.wrap(e)
         if "All numbers are identical" in e:
-            Data(pvalue=0), Data(pvalue=0), mids[0]
-
+            return Data(pvalue=0), Data(pvalue=0), mids[0]
+        raise e
 
     # TOTAL SUM-OF-SQUARES
     if m_start - start == 0:
@@ -196,19 +196,24 @@ def sliding_MWU(values):
     )
 
     med = (len(median_weight) + 1) / 2
-    m_score = np.array(
-        [
-            stats.mannwhitneyu(
-                w[:weight_radius],
-                w[-weight_radius:],
-                use_continuity=True,
-                alternative="two-sided",
-            )
-            for v in window
-            for r in [rankdata(v)]
-            for w in [(r - med) * median_weight]
-        ]
-    )
+    try:
+        m_score = np.array(
+            [
+                stats.mannwhitneyu(
+                    w[:weight_radius],
+                    w[-weight_radius:],
+                    use_continuity=True,
+                    alternative="two-sided",
+                )
+                for v in window
+                for r in [rankdata(v)]
+                for w in [(r - med) * median_weight]
+            ]
+        )
 
-    return m_score
-
+        return m_score
+    except Exception as cause:
+        cause = Except.wrap(cause)
+        if "All numbers are identical" in cause:
+            return np.ones((window.shape[0], 2))
+        raise cause
