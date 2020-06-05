@@ -5,15 +5,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
-from jx_mysql import esfilter2sqlwhere
+from jx_mysql.mysql import esfilter2sqlwhere
 
-from mo_dots import wrap
+from mo_dots import to_data
 
 
 def find_holes(db_module, db, table_name, column_name, _range, filter=None):
@@ -24,7 +23,7 @@ def find_holes(db_module, db, table_name, column_name, _range, filter=None):
     if not filter:
         filter = {"match_all": {}}
 
-    _range = wrap(_range)
+    _range = to_data(_range)
     params = {
         "min": _range.min,
         "max": _range.max - 1,
@@ -86,7 +85,7 @@ def values2rows(values, column_names):
                     LOST) THE COLUMN NAMES ARE EXPECTED TO HAVE dots (.)
                     FOR DEEPER PROPERTIES
     """
-    values = wrap(values)
+    values = to_data(values)
     lookup = {name: i for i, name in enumerate(column_names)}
     output = []
     for value in values:

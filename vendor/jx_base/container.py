@@ -5,13 +5,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
 from copy import copy
 
-from mo_dots import Data, is_data, is_many, join_field, set_default, split_field, wrap
+from mo_dots import Data, is_data, is_many, join_field, set_default, split_field, to_data
 from mo_future import is_text
 from mo_logs import Log
 
@@ -42,7 +42,7 @@ def _delayed_imports():
 
 class Container(object):
     """
-    CONTAINERS HOLD MULTIPLE FACTS AND CAN HANDLE
+    CONTAINERS HOLD MULTIPLE INDICES AND CAN HANDLE
     GENERAL JSON QUERY EXPRESSIONS ON ITS CONTENTS
     METADATA FOR A Container IS CALLED A Namespace
     """
@@ -79,7 +79,7 @@ class Container(object):
             settings.type = None  # WE DO NOT WANT TO INFLUENCE THE TYPE BECAUSE NONE IS IN THE frum STRING ANYWAY
             return type2container["elasticsearch"](settings)
         elif is_data(frum):
-            frum = wrap(frum)
+            frum = to_data(frum)
             if frum.type and type2container[frum.type]:
                 return type2container[frum.type](frum.settings)
             elif frum["from"]:
@@ -112,10 +112,6 @@ class Container(object):
         raise NotImplementedError()
 
     def window(self, window):
-        raise NotImplementedError()
-
-    def having(self, having):
-        _ = having
         raise NotImplementedError()
 
     def format(self, format):

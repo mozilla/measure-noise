@@ -4,13 +4,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
 import sys
 
-from mo_dots import _set_attr as mo_dots_set_attr, split_field, wrap
+from mo_dots import _set_attr as mo_dots_set_attr, split_field, to_data
 
 DEBUG = True
 
@@ -23,7 +23,7 @@ def set(constants):
     """
     if not constants:
         return
-    constants = wrap(constants)
+    constants = to_data(constants)
 
     for full_path, new_value in constants.leaves():
         errors = []
@@ -33,7 +33,7 @@ def set(constants):
             Log.error("expecting <module>.<constant> format, not {{path|quote}}", path=k_path)
         name = k_path[-1]
         try:
-            old_value = mo_dots_set_attr(sys.modules, k_path, new_value)
+            mo_dots_set_attr(sys.modules, k_path, new_value)
             continue
         except Exception as e:
             errors.append(e)

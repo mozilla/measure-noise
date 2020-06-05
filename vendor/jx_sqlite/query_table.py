@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http:# mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 
@@ -19,9 +19,9 @@ from jx_base.expressions import TupleOp, Variable, jx_expression
 from jx_base.language import is_op
 from jx_base.query import QueryOp
 from jx_python import jx
-from jx_sqlite import GUID, sql_aggs, unique_name, untyped_column
+from jx_sqlite.utils import GUID, sql_aggs, unique_name, untyped_column
 from jx_sqlite.base_table import BaseTable
-from jx_sqlite.expressions import SQLang
+from jx_sqlite.expressions._utils import SQLang
 from jx_sqlite.groupby_table import GroupbyTable
 from mo_collections.matrix import Matrix, index_to_coordinate
 from mo_dots import Data, Null, coalesce, concat_field, is_list, listwrap, relative_field, startswith_field, unwrap, \
@@ -29,9 +29,9 @@ from mo_dots import Data, Null, coalesce, concat_field, is_list, listwrap, relat
 from mo_future import text, transpose
 from mo_json import STRING, STRUCT
 from mo_logs import Log
-from pyLibrary.sql import SQL, SQL_FROM, SQL_ORDERBY, SQL_SELECT, SQL_WHERE, sql_count, sql_iso, sql_list, SQL_CREATE, \
-    SQL_AS, SQL_DELETE, ConcatSQL, JoinSQL, SQL_COMMA
-from pyLibrary.sql.sqlite import quote_column, sql_alias
+from mo_sql import SQL_FROM, SQL_ORDERBY, SQL_SELECT, SQL_WHERE, sql_count, sql_iso, sql_list, SQL_CREATE, \
+    SQL_AS, SQL_DELETE, ConcatSQL, JoinSQL, SQL_COMMA, SQL
+from jx_sqlite.sqlite import quote_column, sql_alias
 
 
 class QueryTable(GroupbyTable, Facts):
@@ -51,9 +51,9 @@ class QueryTable(GroupbyTable, Facts):
         return bool(counter)
 
     def delete(self, where):
-        filter = SQLang[jx_expression(where)].to_sql(self.schema)
+        filter = SQLang[jx_expression(where)].to_sql(self.schema).sql.b
         with self.db.transaction() as t:
-            t.execute(ConcatSQL((SQL_DELETE, SQL_FROM, quote_column(self.snowflake.fact_name), SQL_WHERE, filter)))
+            t.execute(ConcatSQL(SQL_DELETE, SQL_FROM, quote_column(self.snowflake.fact_name), SQL_WHERE, filter))
 
     def vars(self):
         return set(self.schema.columns.keys())
@@ -78,19 +78,21 @@ class QueryTable(GroupbyTable, Facts):
             select.append(sql_alias(quote_column(c.es_column), c.name))
 
         where_sql = SQLang[jx_expression(filter)].to_sql(self.schema)[0].sql.b
-        result = self.db.query(ConcatSQL((
+        result = self.db.query(ConcatSQL(
             SQL_SELECT, JoinSQL(SQL_COMMA, select),
             SQL_FROM, quote_column(self.snowflake.fact_name),
             SQL_WHERE, where_sql
-        )))
+        ))
 
         return wrap([{c: v for c, v in zip(column_names, r)} for r in result.data])
 
-    def query(self, query):
+    def query(self, query=None):
         """
         :param query:  JSON Query Expression, SET `format="container"` TO MAKE NEW TABLE OF RESULT
         :return:
         """
+        if not query:
+            query = {}
         if not query.get('from'):
             query['from'] = self.name
         elif not startswith_field(query['from'], self.name):
@@ -112,7 +114,7 @@ class QueryTable(GroupbyTable, Facts):
             command = create_table + op
             query.edges, query.groupby = query.groupby, query.edges
         elif query.edges or any(a != "none" for a in listwrap(query.select).aggregate):
-            op, index_to_columns = self._edges_op(query, self.schema)
+            op, index_to_columns = self._edges_op(query, query.frum.schema)
             command = create_table + op
         else:
             op = self._set_op(query)

@@ -4,15 +4,16 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
 
 import sys
 
+from mo_future import binary_type, generator_types, is_binary, is_text, text, OrderedDict
+
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
-from mo_future import binary_type, generator_types, is_binary, is_text, text
 
 none_type = type(None)
 ModuleType = type(sys.modules[__name__])
@@ -42,7 +43,7 @@ def coalesce(*args):
     # http://en.wikipedia.org/wiki/Null_coalescing_operator
     for a in args:
         if a != None:
-            return wrap(a)
+            return to_data(a)
     return Null
 
 
@@ -95,12 +96,17 @@ def unliteral_field(field):
 def tail_field(field):
     """
     RETURN THE FIRST STEP IN PATH, ALONG WITH THE REMAINING TAIL
+    IN (first, rest) PAIR
     """
     if field == "." or field==None:
         return ".", "."
     elif "." in field:
         if "\\." in field:
-            return tuple(k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".", 1))
+            path = field.replace("\\.", "\a").split(".", 1)
+            if len(path) == 1:
+                return path[0].replace("\a", "."), "."
+            else:
+                return tuple(k.replace("\a", ".") for k in path)
         else:
             return field.split(".", 1)
     else:
@@ -155,6 +161,8 @@ def startswith_field(field, prefix):
     """
     RETURN True IF field PATH STRING STARTS WITH prefix PATH STRING
     """
+    if prefix == None:
+        return False
     if prefix.startswith("."):
         return True
         # f_back = len(field) - len(field.strip("."))
@@ -201,22 +209,24 @@ def hash_value(v):
         return hash(tuple(sorted(hash_value(vv) for vv in v.values())))
 
 
-def set_default(*params):
+def set_default(*dicts):
     """
-    UPDATES FIRST dict WITH THE MERGE RESULT, WHERE MERGE RESULT IS DEFINED AS:
-    FOR EACH LEAF, RETURN THE HIGHEST PRIORITY LEAF VALUE
+    RECURSIVE MERGE OF MULTIPLE dicts MOST IMPORTANT FIRST
 
-    :param params:  dicts IN PRIORITY ORDER, FIRST IS HIGHES PRIORITY
-    :return: FIRST dict OR NEW dict WITH PROPERTIES SET
+    UPDATES dicts[0] WITH THE MERGE RESULT, WHERE MERGE RESULT IS DEFINED AS:
+    FOR EACH LEAF, RETURN THE FIRST NOT-NULL LEAF VALUE
+
+    :param dicts: dicts IN PRIORITY ORDER, HIHEST TO LOWEST
+    :return: dicts[0]
     """
-    p0 = params[0]
+    p0 = dicts[0]
     agg = p0 if p0 or _get(p0, CLASS) in data_types else {}
-    for p in params[1:]:
+    for p in dicts[1:]:
         p = unwrap(p)
         if p is None:
             continue
         _all_default(agg, p, seen={})
-    return wrap(agg)
+    return to_data(agg)
 
 
 def _all_default(d, default, seen=None):
@@ -233,7 +243,10 @@ def _all_default(d, default, seen=None):
 
     for k, default_value in default.items():
         default_value = unwrap(default_value)  # TWO DIFFERENT Dicts CAN SHARE id() BECAUSE THEY ARE SHORT LIVED
-        existing_value = _get_attr(d, [k])
+        if is_data(d):
+            existing_value = d.get(k)
+        else:
+            existing_value = _get_attr(d, [k])
 
         if existing_value == None:
             if default_value != None:
@@ -424,14 +437,15 @@ def _set_attr(obj_, path, value):
     # ACTUAL SETTING OF VALUE
     try:
         old_value = _get_attr(obj, [attr_name])
-        if old_value == None:
+        old_type = _get(old_value, CLASS)
+        if old_value == None or old_type in (bool, int, float, text, binary_type):
             old_value = None
             new_value = value
         elif value == None:
             new_value = None
         else:
             new_value = _get(old_value, CLASS)(value)  # TRY TO MAKE INSTANCE OF SAME CLASS
-    except Exception as e:
+    except Exception:
         old_value = None
         new_value = value
 
@@ -443,14 +457,34 @@ def _set_attr(obj_, path, value):
             obj[attr_name] = new_value
             return old_value
         except Exception as f:
-            get_logger().error(PATH_NOT_FOUND, cause=e)
+            get_logger().error(PATH_NOT_FOUND, cause=[f, e])
 
 
 def lower_match(value, candidates):
-    return [v for v in candidates if v.lower()==value.lower()]
+    return [v for v in candidates if v.lower() == value.lower()]
 
 
-def wrap(v):
+def dict_to_data(d):
+    """
+    DO NOT CHECK TYPE
+    :param d: dict
+    :return: Data
+    """
+    m = object.__new__(Data)
+    _set(m, SLOT, d)
+    return m
+
+
+def list_to_data(v):
+    """
+    to_data, BUT WITHOUT CHECKS
+    """
+    output = list.__new__(FlatList)
+    output.list = v
+    return output
+
+
+def to_data(v):
     """
     WRAP AS Data OBJECT FOR DATA PROCESSING: https://github.com/klahnakoski/mo-dots/tree/dev/docs
     :param v:  THE VALUE TO WRAP
@@ -459,7 +493,7 @@ def wrap(v):
 
     type_ = _get(v, CLASS)
 
-    if type_ is dict:
+    if type_ in (dict, OrderedDict):
         m = object.__new__(Data)
         _set(m, SLOT, v)
         return m
@@ -473,14 +507,23 @@ def wrap(v):
         return v
 
 
-def wrap_leaves(value):
+wrap = to_data
+
+
+def leaves_to_data(value):
     """
     dict WITH DOTS IN KEYS IS INTERPRETED AS A PATH
     """
-    return wrap(_wrap_leaves(value))
+    return to_data(_leaves_to_data(value))
 
 
-def _wrap_leaves(value):
+wrap_leaves = leaves_to_data
+
+
+def _leaves_to_data(value):
+    """
+    RETURN UNWRAPPED STRUCTURES
+    """
     if value == None:
         return None
 
@@ -493,7 +536,7 @@ def _wrap_leaves(value):
 
         output = {}
         for key, value in value.items():
-            value = _wrap_leaves(value)
+            value = _leaves_to_data(value)
 
             if key == "":
                 get_logger().error("key is empty string.  Probably a bad idea")
@@ -522,21 +565,23 @@ def _wrap_leaves(value):
     if hasattr(value, '__iter__'):
         output = []
         for v in value:
-            v = wrap_leaves(v)
+            v = leaves_to_data(v)
             output.append(v)
         return output
     return value
 
 
 def unwrap(v):
+    if v is None:
+        return None
     _type = _get(v, CLASS)
-    if _type is Data:
+    if _type is NullType:
+        return None
+    elif _type is Data:
         d = _get(v, SLOT)
         return d
     elif _type is FlatList:
         return v.list
-    elif _type is NullType:
-        return None
     elif _type is DataObject:
         d = _get(v, OBJ)
         if _get(d, CLASS) in data_types:
@@ -580,11 +625,11 @@ def listwrap(value):
     if value == None:
         return FlatList()
     elif is_list(value):
-        return wrap(value)
+        return list_to_data(value)
     elif is_many(value):
-        return wrap(list(value))
+        return list_to_data(list(value))
     else:
-        return wrap([unwrap(value)])
+        return list_to_data([unwrap(value)])
 
 def unwraplist(v):
     """

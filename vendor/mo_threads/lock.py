@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 # THIS THREADING MODULE IS PERMEATED BY THE please_stop SIGNAL.
 # THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
@@ -36,7 +36,7 @@ def _late_import():
         return
 
     from mo_logs.exceptions import Except as _Except
-    from mo_logs.exceptions import extract_stack as _extract_stack
+    from mo_logs.exceptions import get_stacktrace as _extract_stack
     from mo_threads.threads import Thread as _Thread
     from mo_logs import Log as _Log
 
@@ -73,8 +73,9 @@ class Lock(object):
     def __exit__(self, a, b, c):
         if self.waiting:
             self.debug and _Log.note("signaling {{num}} waiters on {{name|quote}}", name=self.name, num=len(self.waiting))
-            waiter = self.waiting.pop()
-            waiter.go()
+            # TELL ANOTHER THAT THE LOCK IS READY SOON
+            other = self.waiting.pop()
+            other.go()
         self.lock.release()
         self.debug and _Log.note("released lock {{name|quote}}", name=self.name)
 
@@ -86,6 +87,9 @@ class Lock(object):
         """
         waiter = Signal()
         if self.waiting:
+            # TELL ANOTHER THAT THE LOCK IS READY SOON
+            other = self.waiting.pop()
+            other.go()
             self.debug and _Log.note("waiting with {{num}} others on {{name|quote}}", num=len(self.waiting), name=self.name, stack_depth=1)
             self.waiting.insert(0, waiter)
         else:

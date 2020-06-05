@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -16,7 +16,7 @@ from jx_base.utils import is_variable_name
 from jx_base.query import QueryOp
 from jx_base.language import is_op
 from jx_python.namespace import Namespace, convert_list
-from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, wrap, is_many
+from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, to_data, is_many, dict_to_data
 from mo_future import is_text
 from mo_logs import Log
 from mo_math import is_number
@@ -29,7 +29,7 @@ class Rename(Namespace):
         """
         EXPECTING A LIST OF {"name":name, "value":value} OBJECTS TO PERFORM A MAPPING
         """
-        dimensions = wrap(dimensions)
+        dimensions = to_data(dimensions)
         if is_data(dimensions) and dimensions.name == None:
             # CONVERT TO A REAL DIMENSION DEFINITION
             dimensions = {"name": ".", "type": "set", "edges":[{"name": k, "field": v} for k, v in dimensions.items()]}
@@ -59,13 +59,13 @@ class Rename(Namespace):
                 return self._convert_query(expr)
             elif len(expr) >= 2:
                 #ASSUME WE HAVE A NAMED STRUCTURE, NOT AN EXPRESSION
-                return wrap({name: self.convert(value) for name, value in expr.leaves()})
+                return dict_to_data({name: self.convert(value) for name, value in expr.leaves()})
             else:
                 # ASSUME SINGLE-CLAUSE EXPRESSION
                 k, v = expr.items()[0]
                 return converter_map.get(k, self._convert_bop)(self, k, v)
         elif is_many(expr):
-            return wrap([self.convert(value) for value in expr])
+            return list_to_data([self.convert(value) for value in expr])
         else:
             return expr
 
@@ -75,7 +75,6 @@ class Rename(Namespace):
         output.where = self.convert(query.where)
         output.frum = self._convert_from(query.frum)
         output.edges = convert_list(self._convert_edge, query.edges)
-        output.having = convert_list(self._convert_having, query.having)
         output.window = convert_list(self._convert_window, query.window)
         output.sort = self._convert_clause(query.sort)
         output.format = query.format
@@ -87,12 +86,12 @@ class Rename(Namespace):
 
     def _convert_bop(self, op, term):
         if is_list(term):
-            return {op: map(self.convert, term)}
+            return {op: list(map(self.convert, term))}
 
         return {op: {self.convert(var): val for var, val in term.items()}}
 
     def _convert_many(self, k, v):
-        return {k: map(self.convert, v)}
+        return {k: list(map(self.convert, v))}
 
     def _convert_from(self, frum):
         if is_data(frum):
@@ -120,7 +119,7 @@ class Rename(Namespace):
         """
         JSON QUERY EXPRESSIONS HAVE MANY CLAUSES WITH SIMILAR COLUMN DELCARATIONS
         """
-        clause = wrap(clause)
+        clause = to_data(clause)
 
         if clause == None:
             return None

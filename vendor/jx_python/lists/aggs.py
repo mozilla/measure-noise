@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http:# mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -15,7 +15,7 @@ from jx_base.domains import DefaultDomain, SimpleSetDomain
 from jx_python import windows
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
-from mo_dots import coalesce, listwrap, wrap
+from mo_dots import coalesce, listwrap, to_data
 from mo_logs import Log
 from mo_math import UNION
 from mo_times.dates import Date
@@ -30,7 +30,7 @@ def is_aggs(query):
 
 
 def list_aggs(frum, query):
-    frum = wrap(frum)
+    frum = to_data(frum)
     select = listwrap(query.select)
 
     for e in query.edges:
@@ -57,7 +57,7 @@ def list_aggs(frum, query):
     coord = [None]*len(query.edges)
     edge_accessor = [(i, make_accessor(e)) for i, e in enumerate(query.edges)]
 
-    net_new_edge_names = set(wrap(query.edges).name) - UNION(e.value.vars() for e in query.edges)
+    net_new_edge_names = set(to_data(query.edges).name) - UNION(e.value.vars() for e in query.edges)
     if net_new_edge_names & UNION(ss.value.vars() for ss in select):
         # s_accessor NEEDS THESE EDGES, SO WE PASS THEM ANYWAY
         for d in filter(where, frum):

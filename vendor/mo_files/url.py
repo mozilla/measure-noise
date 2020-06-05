@@ -4,12 +4,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from mo_dots import Data, Null, coalesce, is_data, is_list, wrap
+from mo_dots import Data, Null, coalesce, is_data, is_list, to_data
 from mo_future import PY2, is_text, text, unichr, urlparse, is_binary
-from mo_json import json2value, value2json
 from mo_logs import Log
 
 
@@ -20,7 +19,15 @@ class URL(object):
     [1] https://docs.python.org/3/library/urllib.parse.html
     """
 
+    def __new__(cls, value, *args, **kwargs):
+        if isinstance(value, URL):
+            return value
+        else:
+            return object.__new__(cls)
+
     def __init__(self, value, port=None, path=None, query=None, fragment=None):
+        if isinstance(value, URL):
+            return
         try:
             self.scheme = None
             self.host = None
@@ -37,14 +44,14 @@ class URL(object):
                 scheme, suffix = value.split("//", 2)
                 self.scheme = scheme.rstrip(":")
                 parse(self, suffix, 0, 1)
-                self.query = wrap(url_param2value(self.query))
+                self.query = to_data(url_param2value(self.query))
             else:
                 output = urlparse(value)
                 self.scheme = output.scheme
                 self.port = coalesce(port, output.port)
                 self.host = output.netloc.split(":")[0]
                 self.path = coalesce(path, output.path)
-                self.query = coalesce(query, wrap(url_param2value(output.query)))
+                self.query = coalesce(query, to_data(url_param2value(output.query)))
                 self.fragment = coalesce(fragment, output.fragment)
         except Exception as e:
             Log.error(u"problem parsing {{value}} to URL", value=value, cause=e)
@@ -66,6 +73,13 @@ class URL(object):
         output.path = output.path.rstrip('/') + "/" + other.lstrip('/')
         return output
 
+    def __add__(self, other):
+        if not is_data(other):
+            Log.error("can only add data for query parameters")
+        output = self.__copy__()
+        output.query += other
+        return output
+
     def __unicode__(self):
         return self.__str__().decode('utf8')  # ASSUME chr<128 ARE VALID UNICODE
 
@@ -84,6 +98,12 @@ class URL(object):
 
     def __data__(self):
         return str(self)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        return text(self) == text(other)
 
     def __str__(self):
         url = ""
@@ -110,8 +130,10 @@ def int2hex(value, size):
 
 
 def hex2chr(hex):
-    return unichr(int(hex, 16))
-
+    try:
+        return unichr(int(hex, 16))
+    except Exception as e:
+        raise e
 
 if PY2:
     _map2url = {chr(i): chr(i) for i in range(32, 128)}
@@ -168,6 +190,8 @@ def url_param2value(param):
 
         output = text("".join(output))
         try:
+            from mo_json import json2value
+
             return json2value(output)
         except Exception:
             pass
@@ -204,11 +228,13 @@ def value2url_param(value):
         Log.error("Can not encode None into a URL")
 
     if is_data(value):
-        value_ = wrap(value)
-        output = "&".join([
+        from mo_json import value2json
+
+        value_ = to_data(value)
+        output = "&".join(
             value2url_param(k) + "=" + (value2url_param(v) if is_text(v) else value2url_param(value2json(v)))
-            for k, v in value_.leaves()
-            ])
+            for k, v in sorted(value_.leaves(), key=lambda p: p[0])
+        )
     elif is_text(value):
         output = "".join(_map2url[c] for c in value.encode('utf8'))
     elif is_binary(value):

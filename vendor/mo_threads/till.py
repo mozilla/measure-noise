@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 # THIS THREADING MODULE IS PERMEATED BY THE please_stop SIGNAL.
 # THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
@@ -39,7 +39,7 @@ class Till(Signal):
 
     def __new__(cls, till=None, seconds=None):
         if not enabled:
-            Log.note("Till daemon not enabled")
+            Log.note("Till daemon not enabled", stack_depth=1)
             return DONE
         elif till != None:
             return object.__new__(cls)
@@ -52,7 +52,8 @@ class Till(Signal):
 
     def __init__(self, till=None, seconds=None):
         """
-        ONE OF THESE PARAMETERS IS REQUIRED
+        Signal after some elapsed time:  Till(seconds=1).wait()
+
         :param till: UNIX TIMESTAMP OF WHEN TO SIGNAL
         :param seconds: PREFERRED OVER timeout
         """
