@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
@@ -18,7 +18,7 @@ from mozillapulse.consumers import GenericConsumer
 from mozillapulse.utils import time_to_string
 from pytz import timezone
 
-from mo_dots import Data, coalesce, set_default, wrap
+from mo_dots import Data, coalesce, set_default, to_data
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except, suppress_exception
@@ -72,7 +72,7 @@ class Consumer(Thread):
     def _got_result(self, data, message):
         global count
 
-        data = wrap(data)
+        data = to_data(data)
         with count_locker:
             Log.note("{{count}} from {{exchange}}", count=count, exchange=self.pulse.exchange)
             data._meta.count = count

@@ -6,7 +6,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 # THIS THREADING MODULE IS PERMEATED BY THE please_stop SIGNAL.
 # THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
@@ -16,6 +16,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import types
 from collections import deque
+from copy import copy
 from datetime import datetime
 from time import time
 
@@ -38,8 +39,10 @@ datetime.strptime('2012-01-01', '%Y-%m-%d')  # http://bugs.python.org/issue7980
 
 class Queue(object):
     """
-     SIMPLE MESSAGE QUEUE, multiprocessing.Queue REQUIRES SERIALIZATION, WHICH
-     IS DIFFICULT TO USE JUST BETWEEN THREADS (SERIALIZATION REQUIRED)
+     SIMPLE MULTI-THREADED QUEUE
+
+     (multiprocessing.Queue REQUIRES SERIALIZATION, WHICH
+     IS DIFFICULT TO USE JUST BETWEEN THREADS)
     """
 
     def __init__(self, name, max=None, silent=False, unique=False, allow_add_after_close=False):
@@ -106,6 +109,19 @@ class Queue(object):
                 self.queue.appendleft(value)
         return self
 
+    def push_all(self, values):
+        """
+        SNEAK values TO FRONT OF THE QUEUE
+        """
+        if self.closed and not self.allow_add_after_close:
+            Log.error("Do not push to closed queue")
+
+        with self.lock:
+            self._wait_for_queue_space()
+            if not self.closed:
+                self.queue.extendleft(values)
+        return self
+
     def pop_message(self, till=None):
         """
         RETURN TUPLE (message, payload) CALLER IS RESPONSIBLE FOR CALLING message.delete() WHEN DONE
@@ -163,7 +179,7 @@ class Queue(object):
                 if not stop_waiting and len(self.queue) >= self.max:
                     now = time()
                     Log.alert(
-                        "Queue by name of {{name|quote}} is full with ({{num}} items), thread(s) have been waiting {{wait_time}} sec",
+                        "Queue with name {{name|quote}} is full with ({{num}} items), thread(s) have been waiting {{wait_time}} sec",
                         name=self.name,
                         num=len(self.queue),
                         wait_time=now-start
@@ -222,7 +238,7 @@ class Queue(object):
             elif not self.queue:
                 return None
             else:
-                v =self.queue.pop()
+                v =self.queue.popleft()
                 if v is THREAD_STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
                     self.closed.go()
                 return v
@@ -399,16 +415,15 @@ class ThreadedQueue(Queue):
         max_size=None,   # SET THE MAXIMUM SIZE OF THE QUEUE, WRITERS WILL BLOCK IF QUEUE IS OVER THIS LIMIT
         period=None,  # MAX TIME (IN SECONDS) BETWEEN FLUSHES TO SLOWER QUEUE
         silent=False,  # WRITES WILL COMPLAIN IF THEY ARE WAITING TOO LONG
-        error_target=None  # CALL THIS WITH ERROR **AND THE LIST OF OBJECTS ATTEMPTED**
+        error_target=None  # CALL error_target(error, buffer) **buffer IS THE LIST OF OBJECTS ATTEMPTED**
                            # BE CAREFUL!  THE THREAD MAKING THE CALL WILL NOT BE YOUR OWN!
                            # DEFAULT BEHAVIOUR: THIS WILL KEEP RETRYING WITH WARNINGS
     ):
         if period !=None and not isinstance(period, (int, float, long)):
             Log.error("Expecting a float for the period")
-
+        period = coalesce(period, 1)  # SECONDS
         batch_size = coalesce(batch_size, int(max_size / 2) if max_size else None, 900)
         max_size = coalesce(max_size, batch_size * 2)  # REASONABLE DEFAULT
-        period = coalesce(period, 1)  # SECONDS
 
         Queue.__init__(self, name=name, max=max_size, silent=silent)
 
@@ -426,6 +441,9 @@ class ThreadedQueue(Queue):
         last_push = now - period
 
         def push_to_queue():
+            if self.slow_queue.__class__.__name__ == "Index":
+                if self.slow_queue.settings.index.startswith("saved"):
+                    Log.alert("INSERT SAVED QUERY {{data|json}}", data=copy(_buffer))
             self.slow_queue.extend(_buffer)
             del _buffer[:]
             for ppf in _post_push_functions:

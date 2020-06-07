@@ -5,14 +5,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http:# mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division
 
 import re
 
 from mo_future import first
-from mo_dots import Data, coalesce, is_data, listwrap, wrap_leaves
+from mo_dots import Data, coalesce, is_data, listwrap, leaves_to_data
 from mo_logs import Log, strings
 from mo_times.dates import Date
 
@@ -27,7 +27,7 @@ GLOBALS = {
     "Log": Log,
     "Data": Data,
     "re": re,
-    "wrap_leaves": wrap_leaves,
+    "leaves_to_data": leaves_to_data,
     "is_data": is_data,
     "first": first
 }

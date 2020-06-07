@@ -5,33 +5,37 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 from copy import copy
+from importlib import import_module
 
 import jx_base
+import mo_math
 from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, Domain, SetDomain
-from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_, ScriptOp, TRUE, Variable, jx_expression
-from jx_base.utils import is_variable_name
+from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_, ScriptOp, Variable, jx_expression
 from jx_base.language import is_expression, is_op
-from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, literal_field, relative_field, set_default, unwrap, unwraplist, wrap, is_many
+from jx_base.utils import is_variable_name
+from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, \
+    literal_field, relative_field, set_default, unwrap, unwraplist, is_many, dict_to_data, to_data, list_to_data
+from mo_dots.lists import EMPTY
 from mo_future import is_text, text
-from mo_json import STRUCT
+from mo_json import INTERNAL
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
-import mo_math
 from mo_math import AND, UNION, is_number
 
+BAD_SELECT = "Expecting `value` or `aggregate` in select clause not {{select}}"
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
 DEFAULT_SELECT = Data(name="count", value=jx_expression("."), aggregate="count", default=0)
 
 _jx = None
 _Column = None
+
 
 
 def _late_import():
@@ -46,15 +50,9 @@ def _late_import():
 
 
 class QueryOp(QueryOp_):
-    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "having", "format", "isLean"]
+    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "chunk_size", "destination"]
 
-    # def __new__(cls, op=None, frum=None, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
-    #     output = object.__new__(cls)
-    #     for s in QueryOp.__slots__:
-    #         setattr(output, s, None)
-    #     return output
-
-    def __init__(self,frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
+    def __init__(self,frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None, chunk_size=None, destination=None):
         if isinstance(frum, jx_base.Table):
             pass
         else:
@@ -68,6 +66,8 @@ class QueryOp(QueryOp_):
         self.sort = sort
         self.limit = limit
         self.format = format
+        self.chunk_size = chunk_size
+        self.destination = destination
 
     def __data__(self):
         def select___data__():
@@ -177,18 +177,18 @@ class QueryOp(QueryOp_):
             return edge
 
         if is_list(self.select):
-            select = wrap([map_select(s, map_) for s in self.select])
+            select = list_to_data([map_select(s, map_) for s in self.select])
         else:
             select = map_select(self.select, map_)
 
         return QueryOp(
             frum=self.frum.map(map_),
             select=select,
-            edges=wrap([map_edge(e, map_) for e in self.edges]),
-            groupby=wrap([g.map(map_) for g in self.groupby]),
-            window=wrap([w.map(map_) for w in self.window]),
+            edges=list_to_data([map_edge(e, map_) for e in self.edges]),
+            groupby=list_to_data([g.map(map_) for g in self.groupby]),
+            window=list_to_data([w.map(map_) for w in self.window]),
             where=self.where.map(map_),
-            sort=wrap([map_select(s, map_) for s in listwrap(self.sort)]),
+            sort=list_to_data([map_select(s, map_) for s in listwrap(self.sort)]),
             limit=self.limit,
             format=self.format
         )
@@ -204,16 +204,20 @@ class QueryOp(QueryOp_):
         if is_op(query, QueryOp) or query == None:
             return query
 
-        query = wrap(query)
+        query = to_data(query)
         table = container.get_table(query['from'])
         schema = table.schema
         output = QueryOp(
             frum=table,
             format=query.format,
-            limit=mo_math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT))
+            chunk_size=query.chunk_size,
+            destination=query.destination,
         )
 
-        if query.select or isinstance(query.select, (Mapping, list)):
+        _import_temper_limit()
+        output.limit = temper_limit(query.limit, query)
+
+        if query.select or is_many(query.select) or is_data(query.select):
             output.select = _normalize_selects(query.select, query.frum, schema=schema)
         else:
             if query.edges or query.groupby:
@@ -235,12 +239,9 @@ class QueryOp(QueryOp_):
 
         output.where = _normalize_where({"and": listwrap(query.where)}, schema=schema)
         output.window = [_normalize_window(w) for w in listwrap(query.window)]
-        output.having = None
         output.sort = _normalize_sort(query.sort)
-        if not mo_math.is_integer(output.limit) or output.limit < 0:
+        if output.limit != None and (not mo_math.is_integer(output.limit) or output.limit < 0):
             Log.error("Expecting limit >= 0")
-
-        output.isLean = query.isLean
 
         return output
 
@@ -269,11 +270,23 @@ class QueryOp(QueryOp_):
         return output
 
     def __data__(self):
-        output = wrap({s: getattr(self, s) for s in QueryOp.__slots__})
+        output = dict_to_data({s: getattr(self, s) for s in QueryOp.__slots__})
         return output
 
 
-canonical_aggregates = wrap({
+def temper_limit(limit, query):
+    return coalesce(query.limit, 10)
+
+
+def _import_temper_limit():
+    global temper_limit
+    try:
+        temper_limit = import_module("jx_elasticsearch.es52").temper_limit
+    except Exception as e:
+        pass
+
+
+canonical_aggregates = dict_to_data({
     "cardinality": {"name":"cardinality", "default": 0},
     "count": {"name": "count", "default": 0},
     "min": {"name": "minimum"},
@@ -319,7 +332,7 @@ def _normalize_select(select, frum, schema=None):
     if is_text(select):
         canonical = select = Data(value=select)
     else:
-        select = wrap(select)
+        select = to_data(select)
         canonical = select.copy()
 
     canonical.aggregate = coalesce(canonical_aggregates[select.aggregate].name, select.aggregate, "none")
@@ -329,7 +342,10 @@ def _normalize_select(select, frum, schema=None):
         return frum._normalize_select(canonical)
 
     output = []
-    if not select.value or select.value == ".":
+
+    if len(select) and not select.value:
+        Log.error(BAD_SELECT, select=select)
+    elif not select.value or select.value == ".":
         output.extend([
             set_default(
                 {
@@ -355,7 +371,7 @@ def _normalize_select(select, frum, schema=None):
                         canonical
                     )
                     for c in frum.get_columns()
-                    if c.jx_type not in STRUCT
+                    if c.jx_type not in INTERNAL
                 ])
             else:
                 Log.error("do not know what to do")
@@ -364,7 +380,7 @@ def _normalize_select(select, frum, schema=None):
             canonical.value = jx_expression(select.value, schema=schema)
             output.append(canonical)
 
-    output = wrap(output)
+    output = to_data(output)
     if any(n==None for n in output.name):
         Log.error("expecting select to have a name: {{select}}", select=select)
     return output
@@ -380,13 +396,15 @@ def _normalize_select_no_context(select, schema=None):
     if is_text(select):
         select = Data(value=select)
     else:
-        select = wrap(select)
+        select = to_data(select)
 
     output = select.copy()
     if not select.value:
         output.name = coalesce(select.name, select.aggregate)
         if output.name:
             output.value = jx_expression(".", schema=schema)
+        elif len(select):
+            Log.error(BAD_SELECT, select=select)
         else:
             return Null
     elif is_text(select.value):
@@ -422,7 +440,7 @@ def _normalize_select_no_context(select, schema=None):
 
 
 def _normalize_edges(edges, limit, schema=None):
-    return wrap([n for ie, e in enumerate(listwrap(edges)) for n in _normalize_edge(e, ie, limit=limit, schema=schema)])
+    return list_to_data([n for ie, e in enumerate(listwrap(edges)) for n in _normalize_edge(e, ie, limit=limit, schema=schema)])
 
 
 def _normalize_edge(edge, dim_index, limit, schema=None):
@@ -484,7 +502,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
                 )
             ]
     else:
-        edge = wrap(edge)
+        edge = to_data(edge)
         if not edge.name and not is_text(edge.value):
             Log.error("You must name compound and complex edges: {{edge}}", edge=edge)
 
@@ -516,7 +534,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
 def _normalize_groupby(groupby, limit, schema=None):
     if groupby == None:
         return None
-    output = wrap([n for e in listwrap(groupby) for n in _normalize_group(e, None, limit, schema=schema)])
+    output = list_to_data([n for e in listwrap(groupby) for n in _normalize_group(e, None, limit, schema=schema)])
     for i, o in enumerate(output):
         o.dim = i
     if any(o == None for o in output):
@@ -535,7 +553,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
         if edge.endswith(".*"):
             prefix = edge[:-2]
             if schema:
-                output = wrap([
+                output = list_to_data([
                     {  # BECASUE THIS IS A GROUPBY, EARLY SPLIT INTO LEAVES WORKS JUST FINE
                         "name": concat_field(prefix, literal_field(relative_field(untype_path(c.name), prefix))),
                         "put": {"name": literal_field(untype_path(c.name))},
@@ -547,16 +565,16 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                 ])
                 return output
             else:
-                return wrap([{
+                return list_to_data([{
                     "name": untype_path(prefix),
                     "put": {"name": literal_field(untype_path(prefix))},
                     "value": LeavesOp(Variable(prefix)),
                     "allowNulls": True,
-                    "dim":dim_index,
+                    "dim": dim_index,
                     "domain": {"type": "default"}
                 }])
 
-        return wrap([{
+        return list_to_data([{
             "name": edge,
             "value": jx_expression(edge, schema=schema),
             "allowNulls": True,
@@ -564,14 +582,14 @@ def _normalize_group(edge, dim_index, limit, schema=None):
             "domain": Domain(type="default", limit=limit)
         }])
     else:
-        edge = wrap(edge)
-        if (edge.domain and edge.domain.type != "default") or edge.allowNulls != None:
+        edge = to_data(edge)
+        if (edge.domain and edge.domain.type != "default"):
             Log.error("groupby does not accept complicated domains")
 
         if not edge.name and not is_text(edge.value):
             Log.error("You must name compound edges: {{edge}}",  edge= edge)
 
-        return wrap([{
+        return list_to_data([{
             "name": coalesce(edge.name, edge.value),
             "value": jx_expression(edge.value, schema=schema),
             "allowNulls": True,
@@ -760,8 +778,8 @@ def _normalize_sort(sort=None):
     CONVERT SORT PARAMETERS TO A NORMAL FORM SO EASIER TO USE
     """
 
-    if sort==None:
-        return FlatList.EMPTY
+    if sort == None:
+        return EMPTY
 
     output = FlatList()
     for s in listwrap(sort):

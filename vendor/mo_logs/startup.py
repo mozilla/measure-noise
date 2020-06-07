@@ -5,22 +5,20 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import argparse as _argparse
 import os
 import sys
 import tempfile
 
-from mo_dots import coalesce, listwrap, unwrap, wrap
-from mo_files import File
 import mo_json_config
+from mo_dots import coalesce, listwrap, unwrap, to_data
+from mo_files import File
 from mo_logs import Log
-
 
 # PARAMETERS MATCH argparse.ArgumentParser.add_argument()
 # https://docs.python.org/dev/library/argparse.html#the-add-argument-method
@@ -43,7 +41,7 @@ class _ArgParser(_argparse.ArgumentParser):
         Log.error("argparse error: {{error}}", error=message)
 
 
-def argparse(defs):
+def argparse(defs, complain=True):
     parser = _ArgParser()
     for d in listwrap(defs):
         args = d.copy()
@@ -51,17 +49,18 @@ def argparse(defs):
         args.name = None
         parser.add_argument(*unwrap(listwrap(name)), **args)
     namespace, unknown = parser.parse_known_args()
-    if unknown:
+    if unknown and complain:
         Log.warning("Ignoring arguments: {{unknown|json}}", unknown=unknown)
     output = {k: getattr(namespace, k) for k in vars(namespace)}
-    return wrap(output)
+    return to_data(output)
 
 
-def read_settings(defs=None, filename=None, default_filename=None):
+def read_settings(defs=None, filename=None, default_filename=None, complain=True):
     """
     :param filename: Force load a file
     :param defs: more arguments you want to accept (see https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument)
     :param default_filename: A config file from an environment variable (a fallback config file, if no other provided)
+    :parma complain: Complain about args mismatch
     """
     # READ SETTINGS
     defs = listwrap(defs)
@@ -73,7 +72,7 @@ def read_settings(defs=None, filename=None, default_filename=None):
         "default": None,
         "required": False
     })
-    args = argparse(defs)
+    args = argparse(defs, complain)
 
     args.filename = coalesce(
         filename,

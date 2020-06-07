@@ -233,7 +233,7 @@ def show_sorted(sort, limit, where=True, show_distribution=None, show_old=True):
 
 def main():
     global local_container, summary_table, candidates
-    local_container = Container(db=config.analysis.local_db)
+    local_container = Container(kwargs=config.analysis.local_db)
     summary_table = local_container.get_or_create_facts("perf_summary")
 
     if config.args.id:

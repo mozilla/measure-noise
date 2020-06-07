@@ -5,16 +5,18 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from datetime import date, datetime, timedelta
-from decimal import Decimal
 import math
 import re
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 
-from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, wrap, wrap_leaves
+from hjson import loads as hjson2value
+
+from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, to_data, leaves_to_data
 from mo_dots.objects import DataObject
 from mo_future import PY2, integer_types, is_binary, is_text, items, long, none_type, text
 from mo_logs import Except, Log, strings
@@ -29,15 +31,20 @@ IS_NULL = '0'
 BOOLEAN = 'boolean'
 INTEGER = 'integer'
 NUMBER = 'number'
+TIME = 'time'
+INTERVAL = 'interval'
 STRING = 'string'
 OBJECT = 'object'
 NESTED = "nested"
 EXISTS = "exists"
 
-ALL_TYPES = {IS_NULL: IS_NULL, BOOLEAN: BOOLEAN, INTEGER: INTEGER, NUMBER: NUMBER, STRING: STRING, OBJECT: OBJECT, NESTED: NESTED, EXISTS: EXISTS}
-JSON_TYPES = [BOOLEAN, INTEGER, NUMBER, STRING, OBJECT]
-PRIMITIVE = [EXISTS, BOOLEAN, INTEGER, NUMBER, STRING]
-STRUCT = [EXISTS, OBJECT, NESTED]
+ALL_TYPES = {IS_NULL: IS_NULL, BOOLEAN: BOOLEAN, INTEGER: INTEGER, NUMBER: NUMBER, TIME:TIME, INTERVAL:INTERVAL, STRING: STRING, OBJECT: OBJECT, NESTED: NESTED, EXISTS: EXISTS}
+JSON_TYPES = (BOOLEAN, INTEGER, NUMBER, STRING, OBJECT)
+NUMBER_TYPES = (INTEGER, NUMBER)
+PRIMITIVE = (EXISTS, BOOLEAN, INTEGER, NUMBER, TIME, INTERVAL, STRING)
+INTERNAL = (EXISTS, OBJECT, NESTED)
+STRUCT = (OBJECT, NESTED)
+
 
 true, false, null = True, False, None
 
@@ -123,7 +130,7 @@ def _keep_whitespace(value):
         return None
 
 
-def _trim_whitespace(value):
+def trim_whitespace(value):
     value_ = value.strip()
     if value_:
         return value_
@@ -238,7 +245,7 @@ def value2json(obj, pretty=False, sort_keys=False, keep_whitespace=True):
     :return:
     """
     if FIND_LOOPS:
-        obj = scrub(obj, scrub_text=_keep_whitespace if keep_whitespace else _trim_whitespace())
+        obj = scrub(obj, scrub_text=_keep_whitespace if keep_whitespace else trim_whitespace())
     try:
         json = json_encoder(obj, pretty=pretty)
         if json == None:
@@ -289,31 +296,22 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
     :param leaves: ASSUME JSON KEYS ARE DOT-DELIMITED
     :return: Python value
     """
-    if not is_text(json_string):
+    json_string = text(json_string)
+    if not is_text(json_string) and json_string.__class__.__name__ != "FileString":
         Log.error("only unicode json accepted")
 
     try:
-        if flexible:
-            # REMOVE """COMMENTS""", # COMMENTS, //COMMENTS, AND \n \r
-            # DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py# L58
-            json_string = re.sub(r"\"\"\".*?\"\"\"", r"\n", json_string, flags=re.MULTILINE)
-            json_string = "\n".join(remove_line_comment(l) for l in json_string.split("\n"))
-            # ALLOW DICTIONARY'S NAME:VALUE LIST TO END WITH COMMA
-            json_string = re.sub(r",\s*\}", r"}", json_string)
-            # ALLOW LISTS TO END WITH COMMA
-            json_string = re.sub(r",\s*\]", r"]", json_string)
-
         if params:
             # LOOKUP REFERENCES
             json_string = expand_template(json_string, params)
 
-        try:
-            value = wrap(json_decoder(text(json_string)))
-        except Exception as e:
-            Log.error("can not decode\n{{content}}", content=json_string, cause=e)
+        if flexible:
+            value = hjson2value(json_string)
+        else:
+            value = to_data(json_decoder(text(json_string)))
 
         if leaves:
-            value = wrap_leaves(value)
+            value = leaves_to_data(value)
 
         return value
 
@@ -377,9 +375,10 @@ def datetime2unix(d):
 
 
 python_type_to_json_type = {
-    int: NUMBER,
+    int: INTEGER,
     text: STRING,
     float: NUMBER,
+    Decimal: NUMBER,
     bool: BOOLEAN,
     NullType: OBJECT,
     none_type: OBJECT,
@@ -390,12 +389,15 @@ python_type_to_json_type = {
     set: NESTED,
     # tuple: NESTED,  # DO NOT INCLUDE, WILL HIDE LOGIC ERRORS
     FlatList: NESTED,
-    Date: NUMBER
+    Date: TIME,
+    datetime: TIME,
+    date: TIME,
 }
 
 if PY2:
     python_type_to_json_type[str] = STRING
-    python_type_to_json_type[long] = NUMBER
+    python_type_to_json_type[long] = INTEGER
+
 
 for k, v in items(python_type_to_json_type):
     python_type_to_json_type[k.__name__] = v

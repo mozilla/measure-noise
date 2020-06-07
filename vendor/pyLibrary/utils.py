@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import division, unicode_literals
 
@@ -35,7 +35,7 @@ class Version(object):
             self.version = version.version
         else:
             try:
-            self.version = tuple(map(int, version.split('.')))
+                self.version = tuple(map(int, version.split('.')))
             except Exception as e:
                 self.version = [0, 0, 0]
 

@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 # THIS THREADING MODULE IS PERMEATED BY THE please_stop SIGNAL.
 # THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
@@ -18,10 +18,29 @@ from mo_threads.lock import Lock
 from mo_threads.multiprocess import Process
 from mo_threads.queues import Queue, ThreadedQueue
 from mo_threads.signals import Signal, DONE
-from mo_threads.threads import MAIN_THREAD, MainThread, THREAD_STOP, THREAD_TIMEOUT, Thread, stop_main_thread
+from mo_threads.threads import (
+    MAIN_THREAD,
+    MainThread,
+    THREAD_STOP,
+    THREAD_TIMEOUT,
+    Thread,
+    stop_main_thread,
+)
 from mo_threads.till import Till
 
 MAIN_THREAD.timers = Thread.run("timers daemon", till.daemon)
-MAIN_THREAD.children.remove(threads.MAIN_THREAD.timers)
+MAIN_THREAD.children.remove(MAIN_THREAD.timers)
 till.enabled.wait()
-keep_import = (Till, )
+keep_import = (
+    Till,
+    Lock,
+    Process,
+    Queue,
+    ThreadedQueue,
+    Signal,
+    DONE,
+    MainThread,
+    THREAD_STOP,
+    THREAD_TIMEOUT,
+    stop_main_thread,
+)

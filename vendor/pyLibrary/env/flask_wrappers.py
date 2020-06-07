@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -21,7 +21,7 @@ from mo_json import value2json
 from mo_logs import Log
 from mo_threads.threads import register_thread, Thread
 from pyLibrary.env import git
-from pyLibrary.env.big_data import ibytes2icompressed
+from mo_http.big_data import ibytes2icompressed
 
 TOO_SMALL_TO_COMPRESS = 510  # DO NOT COMPRESS DATA WITH LESS THAN THIS NUMBER OF BYTES
 

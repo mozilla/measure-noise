@@ -30,7 +30,7 @@
         }
     },
     "constants": {
-        "pyLibrary.env.http.default_headers": {
+        "mo_http.http.default_headers": {
             "Referer": "https://github.com/mozilla/measure-noise"
         },
         "measure_noise.step_detector.SHOW_CHARTS": false

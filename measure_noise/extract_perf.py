@@ -1,7 +1,7 @@
 from mo_dots import listwrap
 from mo_future import text
 from mo_logs.strings import expand_template
-from pyLibrary.sql.mysql import MySQL, quote_list
+from jx_mysql.mysql import MySQL, quote_list
 
 
 def get_all_signatures(db_config, sql):
