@@ -33,6 +33,7 @@ from jx_sqlite.sqlite import (
     sql_create,
     sql_insert,
     json_type_to_sqlite_type)
+from mo_threads.lock import locked
 from mo_times import Date
 
 _config = None
@@ -92,7 +93,7 @@ class Container(object):
                     yield top_id
                     top_id += 1
 
-        return NEXT(output())
+        return locked(NEXT(output()))
 
     def setup(self):
         if not self.db.about(ABOUT_TABLE):

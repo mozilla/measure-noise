@@ -9,14 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import FALSE, FalseOp, NULL, NullOp, TrueOp, extend
-from jx_base.language import Language
-from jx_sqlite.utils import quote_column
-from jx_sqlite.sqlite import sql_call
-from mo_dots import wrap, FlatList, is_data
-from mo_future import decorate
-from mo_json import BOOLEAN, NESTED, OBJECT, STRING, NUMBER, IS_NULL, TIME, INTERVAL
-from mo_logs import Log
 from mo_sql import (
     SQL,
     SQL_FALSE,
@@ -29,6 +21,14 @@ from mo_sql import (
     SQL_STAR,
     SQL_LT,
     ConcatSQL)
+
+from jx_base.expressions import FALSE, FalseOp, NULL, NullOp, TrueOp, extend
+from jx_base.language import Language
+from jx_sqlite.sqlite import sql_call
+from mo_dots import wrap, FlatList, is_data
+from mo_future import decorate
+from mo_json import BOOLEAN, NESTED, OBJECT, STRING, NUMBER, IS_NULL, TIME, INTERVAL
+from mo_logs import Log
 
 NumberOp, OrOp, SQLScript = [None] * 3
 
@@ -45,7 +45,7 @@ def check(func):
         try:
             output = func(self, schema, not_null, boolean)
         except Exception as e:
-            Log.error("not expected", cause=e)
+            raise Log.error("not expected", cause=e)
         if isinstance(output, SQLScript):
             return output
         if not isinstance(output, FlatList):

@@ -1,4 +1,5 @@
 from jx_sqlite.expressions._utils import SQLang
+from jx_sqlite.expressions.abs_op import AbsOp
 from jx_sqlite.expressions.add_op import AddOp
 from jx_sqlite.expressions.and_op import AndOp
 from jx_sqlite.expressions.basic_add_op import BasicAddOp
