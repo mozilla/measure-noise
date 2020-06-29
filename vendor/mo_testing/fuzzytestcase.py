@@ -5,21 +5,23 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
 
+import datetime
 import types
 import unittest
 
 from mo_collections.unique_index import UniqueIndex
 import mo_dots
-from mo_dots import coalesce, is_container, is_list, literal_field, unwrap, wrap, is_data
+from mo_dots import coalesce, is_container, is_list, literal_field, unwrap, to_data, is_data, is_many
 from mo_future import is_text, zip_longest
 from mo_logs import Except, Log, suppress_exception
-from mo_logs.strings import expand_template
+from mo_logs.strings import expand_template, quote
 import mo_math
 from mo_math import is_number, log10
+from mo_times import dates
 
 
 class FuzzyTestCase(unittest.TestCase):
@@ -91,18 +93,23 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
             if test ^ expected:
                 Log.error("Sets do not match")
         elif is_data(expected) and is_data(test):
-            for k, v2 in unwrap(expected).items():
-                v1 = test.get(k)
-                assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
+            for k, e in unwrap(expected).items():
+                t = test.get(k)
+                assertAlmostEqual(t, e, msg=coalesce(msg, "")+"key "+quote(k)+": ", digits=digits, places=places, delta=delta)
         elif is_data(expected):
-            for k, v2 in expected.items():
+            if is_many(test):
+                test = list(test)
+                if len(test) != 1:
+                    Log.error("Expecting data, not a list")
+                test = test[0]
+            for k, e in expected.items():
                 if is_text(k):
-                    v1 = mo_dots.get_attr(test, literal_field(k))
+                    t = mo_dots.get_attr(test, literal_field(k))
                 else:
-                    v1 = test[k]
-                assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
+                    t = test[k]
+                assertAlmostEqual(t, e, msg=msg, digits=digits, places=places, delta=delta)
         elif is_container(test) and isinstance(expected, set):
-            test = set(wrap(t) for t in test)
+            test = set(to_data(t) for t in test)
             if len(test) != len(expected):
                 Log.error(
                     "Sets do not match, element count different:\n{{test|json|indent}}\nexpecting{{expectedtest|json|indent}}",
@@ -134,8 +141,8 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                 return
             if expected == None:
                 expected = []  # REPRESENT NOTHING
-            for a, b in zip_longest(test, expected):
-                assertAlmostEqual(a, b, msg=msg, digits=digits, places=places, delta=delta)
+            for t, e in zip_longest(test, expected):
+                assertAlmostEqual(t, e, msg=msg, digits=digits, places=places, delta=delta)
         else:
             assertAlmostEqualValue(test, expected, msg=msg, digits=digits, places=places, delta=delta)
     except Exception as e:
@@ -155,13 +162,22 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         if test == None:  # pandas dataframes reject any comparision with an exception!
             return
         else:
-            raise AssertionError(expand_template("{{test}} != NULL", locals()))
+            raise AssertionError(expand_template("{{test|json}} != NULL", locals()))
 
     if expected == None:  # None has no expectations
         return
     if test == expected:
         # shortcut
         return
+    if isinstance(expected, (dates.Date, datetime.datetime, datetime.date)):
+        return assertAlmostEqualValue(
+            dates.Date(test).unix,
+            dates.Date(expected).unix,
+            msg=msg,
+            digits=digits,
+            places=places,
+            delta=delta
+        )
 
     if not is_number(expected):
         # SOME SPECIAL CASES, EXPECTING EMPTY CONTAINERS IS THE SAME AS EXPECTING NULL
@@ -170,8 +186,14 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         if is_data(expected) and not expected.keys() and test == None:
             return
         if test != expected:
-            raise AssertionError(expand_template("{{test}} != {{expected}}", locals()))
+            raise AssertionError(expand_template("{{test|json}} != {{expected|json}}", locals()))
         return
+    elif not is_number(test):
+        try:
+            # ASSUME IT IS A UTC DATE
+            test = dates.parse(test).unix
+        except Exception as e:
+            raise AssertionError(expand_template("{{test|json}} != {{expected}}", locals()))
 
     num_param = 0
     if digits != None:
@@ -180,7 +202,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         num_param += 1
     if delta != None:
         num_param += 1
-    if num_param>1:
+    if num_param > 1:
         raise TypeError("specify only one of digits, places or delta")
 
     if digits is not None:
@@ -189,18 +211,20 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
             if diff < digits:
                 return
 
-        standardMsg = expand_template("{{test}} != {{expected}} within {{digits}} decimal places", locals())
+        standardMsg = expand_template("{{test|json}} != {{expected|json}} within {{digits}} decimal places", locals())
     elif delta is not None:
         if abs(test - expected) <= delta:
             return
 
-        standardMsg = expand_template("{{test}} != {{expected}} within {{delta}} delta", locals())
+        standardMsg = expand_template("{{test|json}} != {{expected|json}} within {{delta}} delta", locals())
     else:
         if places is None:
             places = 15
 
         with suppress_exception:
             diff = mo_math.log10(abs(test-expected))
+            if diff == None:
+                return  # Exactly the same
             if diff < mo_math.ceiling(mo_math.log10(abs(test)))-places:
                 return
 

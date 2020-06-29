@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -14,7 +14,7 @@ import platform
 import sys
 from datetime import datetime
 
-from mo_dots import Data, FlatList, coalesce, is_data, is_list, listwrap, unwraplist, wrap
+from mo_dots import Data, FlatList, coalesce, is_data, is_list, listwrap, unwraplist, to_data, dict_to_data
 from mo_future import PY3, is_text, text
 from mo_logs import constants, exceptions, strings
 from mo_logs.exceptions import Except, LogItem, suppress_exception
@@ -54,7 +54,7 @@ class Log(object):
         global _Thread
         if not settings:
             return
-        settings = wrap(settings)
+        settings = to_data(settings)
 
         Log.stop()
 
@@ -88,10 +88,11 @@ class Log(object):
         if settings.constants:
             constants.set(settings.constants)
 
-        if settings.log:
+        logs = coalesce(settings.log, settings.logs)
+        if logs:
             cls.logging_multi = StructuredLogger_usingMulti()
-            for log in listwrap(settings.log):
-                Log.add_log(Log.new_instance(log))
+            for log in listwrap(logs):
+                Log._add_log(Log.new_instance(log))
 
             from mo_logs.log_usingThread import StructuredLogger_usingThread
             cls.main_log = StructuredLogger_usingThread(cls.logging_multi)
@@ -108,20 +109,23 @@ class Log(object):
 
     @classmethod
     def new_instance(cls, settings):
-        settings = wrap(settings)
+        settings = to_data(settings)
 
         if settings["class"]:
             if settings["class"].startswith("logging.handlers."):
-                from mo_logs.log_usingLogger import StructuredLogger_usingLogger
+                from mo_logs.log_usingHandler import StructuredLogger_usingHandler
 
-                return StructuredLogger_usingLogger(settings)
+                return StructuredLogger_usingHandler(settings)
             else:
                 with suppress_exception:
                     from mo_logs.log_usingLogger import make_log_from_settings
 
                     return make_log_from_settings(settings)
-                  # OH WELL :(
+                # OH WELL :(
 
+        if settings.log_type == "logger":
+            from mo_logs.log_usingLogger import StructuredLogger_usingLogger
+            return StructuredLogger_usingLogger(settings)
         if settings.log_type == "file" or settings.file:
             return StructuredLogger_usingFile(settings.file)
         if settings.log_type == "file" or settings.filename:
@@ -148,11 +152,19 @@ class Log(object):
             from mo_logs.log_usingNothing import StructuredLogger
             return StructuredLogger()
 
-        Log.error("Log type of {{log_type|quote}} is not recognized", log_type=settings.log_type)
+        Log.error("Log type of {{config|json}} is not recognized", config=settings)
 
     @classmethod
-    def add_log(cls, log):
+    def _add_log(cls, log):
         cls.logging_multi.add_log(log)
+
+    @classmethod
+    def set_logger(cls, logger):
+        if cls.logging_multi:
+            cls.logging_multi.add_log(logger)
+        else:
+            from mo_logs.log_usingThread import StructuredLogger_usingThread
+            cls.main_log = StructuredLogger_usingThread(logger)
 
     @classmethod
     def note(
@@ -218,7 +230,7 @@ class Log(object):
 
         params = Data(dict(default_params, **more_params))
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
-        trace = exceptions.extract_stack(stack_depth + 1)
+        trace = exceptions.get_stacktrace(stack_depth + 1)
 
         e = Except(exceptions.UNEXPECTED, template=template, params=params, cause=cause, trace=trace)
         Log._annotate(
@@ -291,7 +303,7 @@ class Log(object):
 
         params = Data(dict(default_params, **more_params))
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
-        trace = exceptions.extract_stack(stack_depth + 1)
+        trace = exceptions.get_stacktrace(stack_depth + 1)
 
         e = Except(exceptions.WARNING, template=template, params=params, cause=cause, trace=trace)
         Log._annotate(
@@ -344,7 +356,7 @@ class Log(object):
             causes = None
             Log.error("can only accept Exception, or list of exceptions")
 
-        trace = exceptions.extract_stack(stack_depth + 1)
+        trace = exceptions.get_stacktrace(stack_depth + 1)
 
         if add_to_trace:
             cause[0].trace.extend(trace[1:])
@@ -400,7 +412,7 @@ def _same_frame(frameA, frameB):
 
 
 # GET THE MACHINE METADATA
-machine_metadata = wrap({
+machine_metadata = dict_to_data({
     "pid":  os.getpid(),
     "python": text(platform.python_implementation()),
     "os": text(platform.system() + platform.release()).strip(),

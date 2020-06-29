@@ -8,44 +8,51 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import concat_field
+from mo_json import STRING
 
-from jx_base import Facts
-from jx_sqlite import UID, GUID
+from mo_dots import concat_field, set_default
+
+from jx_base import Facts, Column
+from jx_sqlite.utils import UID, GUID, DIGITS_TABLE, ABOUT_TABLE
 from jx_sqlite.namespace import Namespace
 from jx_sqlite.query_table import QueryTable
 from jx_sqlite.snowflake import Snowflake
-from mo_future import first
+from mo_future import first, PY3, NEXT
 from mo_kwargs import override
 from mo_logs import Log
-from pyLibrary.sql import (
+from mo_sql import (
     SQL_SELECT,
     SQL_FROM,
     SQL_UPDATE,
     SQL_SET,
 )
-from pyLibrary.sql.sqlite import (
+from jx_sqlite.sqlite import (
     Sqlite,
     quote_column,
     sql_eq,
     sql_create,
     sql_insert,
-)
-
-DIGITS_TABLE = "__digits__"
-ABOUT_TABLE = "meta.about"
+    json_type_to_sqlite_type)
+from mo_threads.lock import locked
+from mo_times import Date
 
 _config = None
 
 
 class Container(object):
     @override
-    def __init__(self, db=None):
+    def __init__(
+            self,
+            db=None,  # EXISTING Sqlite3 DATBASE, OR CONFIGURATION FOR Sqlite DB
+            filename=None,  # FILE FOR THE DATABASE (None FOR MEMORY DATABASE)
+            kwargs=None   # See Sqlite parameters
+    ):
         global _config
         if isinstance(db, Sqlite):
             self.db = db
         else:
-            self.db = db = Sqlite(db)
+            # PASS CALL PARAMETERS TO Sqlite
+            self.db = db = Sqlite(filename=filename, kwargs=set_default({}, db, kwargs))
 
         self.db.create_new_functions()  # creating new functions: regexp
 
@@ -59,33 +66,34 @@ class Container(object):
         self.setup()
         self.ns = Namespace(db=db)
         self.about = QueryTable("meta.about", self)
-        self.next_uid = (
-            self._gen_ids().__next__
-        )  # A DELIGHTFUL SOURCE OF UNIQUE INTEGERS
+        self.next_uid = self._gen_ids()  # A DELIGHTFUL SOURCE OF UNIQUE INTEGERS
 
     def _gen_ids(self):
-        while True:
-            with self.db.transaction() as t:
-                top_id = first(
-                    first(
-                        t.query(
-                            SQL_SELECT
-                            + quote_column("next_id")
-                            + SQL_FROM
-                            + quote_column(ABOUT_TABLE)
-                        ).data
+        def output():
+            while True:
+                with self.db.transaction() as t:
+                    top_id = first(
+                        first(
+                            t.query(
+                                SQL_SELECT
+                                + quote_column("next_id")
+                                + SQL_FROM
+                                + quote_column(ABOUT_TABLE)
+                            ).data
+                        )
                     )
-                )
-                max_id = top_id + 1000
-                t.execute(
-                    SQL_UPDATE
-                    + quote_column(ABOUT_TABLE)
-                    + SQL_SET
-                    + sql_eq(next_id=max_id)
-                )
-            while top_id < max_id:
-                yield top_id
-                top_id += 1
+                    max_id = top_id + 1000
+                    t.execute(
+                        SQL_UPDATE
+                        + quote_column(ABOUT_TABLE)
+                        + SQL_SET
+                        + sql_eq(next_id=max_id)
+                    )
+                while top_id < max_id:
+                    yield top_id
+                    top_id += 1
+
+        return locked(NEXT(output()))
 
     def setup(self):
         if not self.db.about(ABOUT_TABLE):
@@ -100,7 +108,7 @@ class Container(object):
     def create_or_replace_facts(self, fact_name, uid=UID):
         """
         MAKE NEW TABLE, REPLACE OLD ONE IF EXISTS
-        :param fact_name:  NAME FOR THE CENTRAL FACTS
+        :param fact_name:  NAME FOR THE CENTRAL INDEX
         :param uid: name, or list of names, for the GUID
         :return: Facts
         """
@@ -130,7 +138,7 @@ class Container(object):
     def get_or_create_facts(self, fact_name, uid=UID):
         """
         FIND TABLE BY NAME, OR CREATE IT IF IT DOES NOT EXIST
-        :param fact_name:  NAME FOR THE CENTRAL FACTS
+        :param fact_name:  NAME FOR THE CENTRAL INDEX
         :param uid: name, or list of names, for the GUID
         :return: Facts
         """
@@ -140,6 +148,16 @@ class Container(object):
                 Log.error("do not know how to handle yet")
 
             self.ns.columns._snowflakes[fact_name] = ["."]
+            self.ns.columns.add(Column(
+                name="_id",
+                es_column="_id",
+                es_index=fact_name,
+                es_type=json_type_to_sqlite_type[STRING],
+                jx_type=STRING,
+                nested_path=['.'],
+                multi=1,
+                last_updated=Date.now()
+            ))
             command = sql_create(fact_name, {UID: "INTEGER PRIMARY KEY", GUID: "TEXT"}, unique=UID)
 
             with self.db.transaction() as t:

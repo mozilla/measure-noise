@@ -1,7 +1,7 @@
 from mo_dots import listwrap
 from mo_future import text
 from mo_logs.strings import expand_template
-from pyLibrary.sql.mysql import MySQL, quote_list
+from jx_mysql.mysql import MySQL, quote_list
 
 
 def get_all_signatures(db_config, sql):
@@ -90,7 +90,7 @@ datum_sql = """
             a.`is_regression` AS `alert.isregression`,
             a.`status` AS `alert.status`,
             a.`amount_pct` AS `alert.amount_pct`,
-            a.`amount_abs` AS `alert.anount_abs`,
+            a.`amount_abs` AS `alert.amount_abs`,
             a.`prev_value` AS `alert.prev_value`,
             a.`new_value` AS `alert.new_value`,
             a.`t_value` AS `alert.t_value`,

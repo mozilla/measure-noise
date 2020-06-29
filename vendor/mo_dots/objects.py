@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
@@ -15,7 +15,7 @@ from decimal import Decimal
 
 from mo_future import binary_type, generator_types, get_function_arguments, get_function_defaults, none_type, text
 
-from mo_dots import Data, FlatList, NullType, SLOT, get_attr, set_attr, unwrap, wrap
+from mo_dots import Data, FlatList, NullType, SLOT, get_attr, set_attr, unwrap, to_data
 from mo_dots.datas import register_data
 from mo_dots.utils import CLASS, OBJ
 
@@ -109,12 +109,14 @@ def datawrap(v):
         m = Data()
         _set(m, SLOT, v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
+    elif type_ is tuple:
+        return FlatList(v)
     elif type_ is list:
         return FlatList(v)
     elif type_ in (Data, DataObject, none_type, FlatList, text, binary_type, int, float, Decimal, datetime, date, NullType, none_type):
         return v
     elif type_ in generator_types:
-        return (wrap(vv) for vv in v)
+        return (to_data(vv) for vv in v)
     elif isinstance(v, (text, binary_type, int, float, Decimal, datetime, date, FlatList, NullType, Mapping, none_type)):
         return v
     elif hasattr(v, "__data__"):
@@ -135,7 +137,7 @@ class DictClass(object):
         self.constructor = class_.__init__
 
     def __call__(self, *args, **kwargs):
-        settings = wrap(kwargs).settings
+        settings = to_data(kwargs).settings
 
         params = get_function_arguments(self.constructor)[1:]
         func_defaults = get_function_defaults(self.constructor)

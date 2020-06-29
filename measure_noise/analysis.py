@@ -186,7 +186,7 @@ def update_local_database():
     missing = list(set(candidates.id) - set(exists.id))
 
     too_old = Date.today() - parse(LOCAL_RETENTION)
-    needs_update = missing + [e for e in exists if e.last_updated < too_old.unix]
+    needs_update = missing + [e.id for e in exists if e.last_updated < too_old.unix]
     Log.alert("{{num}} series are candidates for local update", num=len(needs_update))
 
     limited_update = Queue("sigs")
@@ -233,7 +233,7 @@ def show_sorted(sort, limit, where=True, show_distribution=None, show_old=True):
 
 def main():
     global local_container, summary_table, candidates
-    local_container = Container(db=config.analysis.local_db)
+    local_container = Container(kwargs=config.analysis.local_db)
     summary_table = local_container.get_or_create_facts("perf_summary")
 
     if config.args.id:

@@ -5,20 +5,26 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
 from uuid import uuid4
 
+from mo_json.typed_encoder import EXISTS_TYPE
+
 from jx_base.expressions import jx_expression
 from jx_python.expressions import Literal, Python
-from mo_dots import coalesce, listwrap, wrap
+from mo_dots import coalesce, listwrap, to_data
 from mo_dots.datas import register_data
+from mo_dots.lists import last
 from mo_future import is_text, text
-from mo_json import value2json
+from mo_json import value2json, true, false, null, EXISTS, OBJECT, NESTED
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
+
+
+ENABLE_CONSTRAINTS = True
 
 
 def generateGuid():
@@ -47,7 +53,7 @@ def _exec(code, name):
         Log.error("Can not make class\n{{code}}", code=code, cause=e)
 
 
-_ = listwrap
+_ = listwrap, last, true, false, null
 
 
 def DataClass(name, columns, constraint=None):
@@ -73,7 +79,7 @@ def DataClass(name, columns, constraint=None):
     :return: The class that has been created
     """
 
-    columns = wrap(
+    columns = to_data(
         [
             {"name": c, "required": True, "nulls": False, "type": object}
             if is_text(c)
@@ -82,10 +88,10 @@ def DataClass(name, columns, constraint=None):
         ]
     )
     slots = columns.name
-    required = wrap(
+    required = to_data(
         filter(lambda c: c.required and not c.nulls and not c.default, columns)
     ).name
-    nulls = wrap(filter(lambda c: c.nulls, columns)).name
+    nulls = to_data(filter(lambda c: c.nulls, columns)).name
     defaults = {c.name: coalesce(c.default, None) for c in columns}
     types = {c.name: coalesce(c.jx_type, object) for c in columns}
 
@@ -104,10 +110,15 @@ class {{class_name}}(Mapping):
 
 
     def _constraint(row, rownum, rows):
-        try:
-            return {{constraint_expr}}
-        except Exception as e:
-            return False
+        code = {{constraint_expr|quote}}
+        if {{constraint_expr}}:
+            return
+        Log.error(
+            "constraint\\n{" + "{code}}\\nnot satisfied {" + "{expect}}\\n{" + "{value|indent}}",
+            code={{constraint_expr|quote}}, 
+            expect={{constraint}}, 
+            value=row
+        )
 
     def __init__(self, **kwargs):
         if not kwargs:
@@ -124,8 +135,7 @@ class {{class_name}}(Mapping):
         if illegal:
             Log.error("{"+"{names}} are not a valid properties", names=illegal)
 
-        if not self._constraint(0, [self]):
-            Log.error("constraint not satisfied {"+"{expect}}\\n{"+"{value|indent}}", expect={{constraint}}, value=self)
+        self._constraint(0, [self])
 
     def __getitem__(self, item):
         return getattr(self, item)
@@ -137,9 +147,12 @@ class {{class_name}}(Mapping):
     def __setattr__(self, item, value):
         if item not in {{slots}}:
             Log.error("{"+"{item|quote}} not valid attribute", item=item)
+
+        if value==None and item in {{required}}:
+            Log.error("Expecting property {"+"{item}}", item=item)
+
         object.__setattr__(self, item, value)
-        if not self._constraint(0, [self]):
-            Log.error("constraint not satisfied {"+"{expect}}\\n{"+"{value|indent}}", expect={{constraint}}, value=self)
+        self._constraint(0, [self])
 
     def __getattr__(self, item):
         Log.error("{"+"{item|quote}} not valid attribute", item=item)
@@ -188,7 +201,7 @@ class {{class_name}}(Mapping):
             "types": "{"
             + (",".join(quote(k) + ": " + v.__name__ for k, v in types.items()))
             + "}",
-            "constraint_expr": Python[jx_expression(constraint)].to_python(),
+            "constraint_expr": Python[jx_expression(not ENABLE_CONSTRAINTS or constraint)].to_python(),
             "constraint": value2json(constraint),
         },
     )
@@ -200,19 +213,12 @@ class {{class_name}}(Mapping):
 
 TableDesc = DataClass(
     "Table",
-    [
-        "name",
-        "url",
-        "query_path",
-        {"name": "last_updated", "nulls": False},
-        "columns"
-    ],
-    constraint={"and": [
-        {"eq": [{"last": "query_path"}, {"literal": "."}]}
-    ]}
+    ["name", "url", "query_path", {"name": "last_updated", "nulls": False}, "columns"],
+    constraint={"and": [{"eq": [{"last": "query_path"}, {"literal": "."}]}]},
 )
 
 
+from jx_base.container import Container
 Column = DataClass(
     "Column",
     [
@@ -225,24 +231,58 @@ Column = DataClass(
         "nested_path",  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
         {"name": "count", "nulls": True},
         {"name": "cardinality", "nulls": True},
-        {"name": "multi", "nulls": True},
+        {"name": "multi", "nulls": False},
         {"name": "partitions", "nulls": True},
         "last_updated",
     ],
     constraint={
         "and": [
+            {
+                "when": {"ne":{"name":"."}},
+                "then": {"ne": ["name", {"first": "nested_path"}]},
+                "else": True
+            },
             {"not": {"find": {"es_column": "null"}}},
             {"not": {"eq": {"es_column": "string"}}},
             {"not": {"eq": {"es_type": "object", "jx_type": "exists"}}},
+            {
+                "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
+                "then": {"eq": {"jx_type": EXISTS}},
+                "else": True
+            },
+            {
+                "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
+                "then": {"exists": "cardinality"},
+                "else": True
+            },
+            {
+                "when": {"eq": {"jx_type": OBJECT}},
+                "then": {"in": {"cardinality": [0, 1]}},
+                "else": True
+            },
+            {
+                "when": {"eq": {"jx_type": NESTED}},
+                "then": {"in": {"cardinality": [0, 1]}},
+                "else": True
+            },
             {"eq": [{"last": "nested_path"}, {"literal": "."}]},
+            {
+                "when": {"eq": [{"literal": ".~N~"}, {"right": {"es_column": 4}}]},
+                "then": {"and": [{"gt": {"multi": 1}}, {"eq": {"jx_type": "nested"}}, {"eq": {"es_type": "nested"}}]},
+                "else": True,
+            },
+            {
+                "when": {"gte": [{"count": "nested_path"}, 2]},
+                "then": {"ne": [{"first": {"right": {"nested_path": 2}}}, {"literal": "."}]},  # SECOND-LAST ELEMENT
+                "else": True
+            }
         ]
     },
 )
-
-
-from jx_base.container import Container
 from jx_base.namespace import Namespace
 from jx_base.facts import Facts
 from jx_base.snowflake import Snowflake
 from jx_base.table import Table
 from jx_base.schema import Schema
+
+

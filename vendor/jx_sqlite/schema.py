@@ -9,7 +9,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.queries import get_property_name
-from jx_sqlite import GUID, untyped_column
+from jx_sqlite.utils import GUID, untyped_column
 from mo_dots import concat_field, relative_field, set_default, startswith_field
 from mo_json import EXISTS, OBJECT, STRUCT
 from mo_logs import Log
@@ -93,7 +93,7 @@ class Schema(object):
         return set(
             c
             for c in self.snowflake.namespace.columns.find(self.snowflake.fact_name)
-            for k in [untyped_column(c.name)]
+            for k, t in [untyped_column(c.name)]
             if k == full_name and k != GUID
             if c.jx_type not in [OBJECT, EXISTS]
         )

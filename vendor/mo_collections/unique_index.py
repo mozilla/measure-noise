@@ -5,16 +5,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import Iterable, Mapping, Set
-
-from mo_dots import is_data, is_sequence, tuplewrap, unwrap, wrap
+from mo_dots import is_data, is_sequence, tuplewrap, unwrap, to_data
 from mo_dots.objects import datawrap
-from mo_future import PY2, iteritems
+from mo_future import PY2, iteritems, Set, Mapping, Iterable, first
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 
@@ -43,12 +41,12 @@ class UniqueIndex(Set, Mapping):
             _key = value2key(self._keys, key)
             if len(self._keys) == 1 or len(_key) == len(self._keys):
                 d = self._data.get(_key)
-                return wrap(d)
+                return to_data(d)
             else:
-                output = wrap([
+                output = list_to_data([
                     d
                     for d in self._data.values()
-                    if all(wrap(d)[k] == v for k, v in _key.items())
+                    if all(to_data(d)[k] == v for k, v in _key.items())
                 ])
                 return output
         except Exception as e:
@@ -71,9 +69,9 @@ class UniqueIndex(Set, Mapping):
         return self._data.keys()
 
     def pop(self):
-        output = iteritems(self._data).next()[1]
+        output = first(iteritems(self._data))[1]
         self.remove(output)
-        return wrap(output)
+        return to_data(output)
 
     def add(self, val):
         val = datawrap(val)
@@ -121,10 +119,10 @@ class UniqueIndex(Set, Mapping):
 
     if PY2:
         def __iter__(self):
-            return (wrap(v) for v in self._data.itervalues())
+            return (to_data(v) for v in self._data.itervalues())
     else:
         def __iter__(self):
-            return (wrap(v) for v in self._data.values())
+            return (to_data(v) for v in self._data.values())
 
     def __sub__(self, other):
         output = UniqueIndex(self._keys, fail_on_dup=self.fail_on_dup)

@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -17,7 +17,7 @@ from decimal import Decimal
 from json.encoder import encode_basestring
 from math import floor
 
-from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, is_list
+from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, is_list, unwrap
 from mo_future import PYPY, binary_type, is_binary, is_text, long, sort_using_key, text, utf8_json_encoder, xrange
 from mo_json import ESCAPE_DCT, float2json, scrub
 from mo_logs import Except
@@ -120,22 +120,6 @@ class cPythonJSONEncoder(object):
             e = Except.wrap(e)
             Log.warning("problem serializing {{type}}", type=text(repr(value)), cause=e)
             raise e
-
-
-def ujson_encode(value, pretty=False):
-    if pretty:
-        return pretty_json(value)
-
-    try:
-        scrubbed = scrub(value)
-        return ujson_dumps(scrubbed, ensure_ascii=False, sort_keys=True, escape_forward_slashes=False).decode('utf8')
-    except Exception as e:
-        from mo_logs.exceptions import Except
-        from mo_logs import Log
-
-        e = Except.wrap(e)
-        Log.warning("problem serializing {{type}}", type=text(repr(value)), cause=e)
-        raise e
 
 
 def _value2json(value, _buffer):
@@ -265,7 +249,8 @@ def _dict2json(value, _buffer):
 
 ARRAY_ROW_LENGTH = 80
 ARRAY_ITEM_MAX_LENGTH = 30
-ARRAY_MAX_COLUMNS = 10
+ARRAY_MAX_COLUMNS = 20
+ARRAY_MIN_ITEMS = 20  # DO NOT ATTEMPT ARRAY FORMATTING IF TOO FEW ITEMS
 INDENT = "    "
 
 
@@ -275,8 +260,11 @@ def pretty_json(value):
             return "false"
         elif value is True:
             return "true"
+        elif value == None:
+            return "null"
         elif is_data(value):
             try:
+                value = unwrap(value)
                 items = sort_using_key(value.items(), lambda r: r[0])
                 values = [encode_basestring(k) + PRETTY_COLON + pretty_json(v) for k, v in items if v != None]
                 if not values:
@@ -301,8 +289,6 @@ def pretty_json(value):
                     keys=[k for k in value.keys()],
                     cause=e
                 )
-        elif value in (None, Null):
-            return "null"
         elif value.__class__ in (binary_type, text):
             if is_binary(value):
                 value = value.decode('utf8')
@@ -351,7 +337,7 @@ def pretty_json(value):
 
             js = [pretty_json(v) for v in value]
             max_len = max(*[len(j) for j in js])
-            if max_len <= ARRAY_ITEM_MAX_LENGTH and max(*[j.find("\n") for j in js]) == -1:
+            if len(js) < ARRAY_MIN_ITEMS and max_len <= ARRAY_ITEM_MAX_LENGTH and max(*[j.find("\n") for j in js]) == -1:
                 # ALL TINY VALUES
                 num_columns = max(1, min(ARRAY_MAX_COLUMNS, int(floor((ARRAY_ROW_LENGTH + 2.0) / float(max_len + 2)))))  # +2 TO COMPENSATE FOR COMMAS
                 if len(js) <= num_columns:  # DO NOT ADD \n IF ONLY ONE ROW
@@ -499,14 +485,9 @@ def unicode_key(key):
     return quote(text(key))
 
 
-# OH HUM, cPython with uJSON, OR pypy WITH BUILTIN JSON?
-# http://liangnuren.wordpress.com/2012/08/13/python-json-performance/
-# http://morepypy.blogspot.ca/2011/10/speeding-up-json-encoding-in-pypy.html
 if PYPY:
     json_encoder = pypy_json_encode
 else:
-    # from ujson import dumps as ujson_dumps
-    # json_encoder = ujson_encode
     json_encoder = cPythonJSONEncoder().encode
 
 

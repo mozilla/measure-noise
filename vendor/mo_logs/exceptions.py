@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 
@@ -66,7 +66,7 @@ class Except(Exception, LogItem):
         )
 
         if not trace:
-            self.trace = extract_stack(2)
+            self.trace = get_stacktrace(2)
         else:
             self.trace = trace
 
@@ -91,15 +91,16 @@ class Except(Exception, LogItem):
             if tb is not None:
                 trace = _parse_traceback(tb)
             else:
-                trace = _extract_traceback(0)
+                trace = get_traceback(0)
 
             cause = Except.wrap(getattr(e, '__cause__', None))
-            if hasattr(e, "message") and e.message:
-                output = Except(context=ERROR, template=text(e.message), trace=trace, cause=cause)
+            message = getattr(e, "message", None)
+            if message:
+                output = Except(context=ERROR, template=e.__class__.__name__+": "+text(message), trace=trace, cause=cause)
             else:
-                output = Except(context=ERROR, template=text(e), trace=trace, cause=cause)
+                output = Except(context=ERROR, template=e.__class__.__name__+": "+text(e), trace=trace, cause=cause)
 
-            trace = extract_stack(stack_depth + 2)  # +2 = to remove the caller, and it's call to this' Except.wrap()
+            trace = get_stacktrace(stack_depth + 2)  # +2 = to remove the caller, and it's call to this' Except.wrap()
             output.trace.extend(trace)
             return output
 
@@ -109,7 +110,7 @@ class Except(Exception, LogItem):
 
     def __contains__(self, value):
         if is_text(value):
-            if self.template.find(value) >= 0 or self.message.find(value) >= 0:
+            if value in self.template or value in self.message:
                 return True
 
         if self.context == value:
@@ -152,7 +153,7 @@ class Except(Exception, LogItem):
         return output
 
 
-def extract_stack(start=0):
+def get_stacktrace(start=0):
     """
     SNAGGED FROM traceback.py
     Altered to return Data
@@ -175,15 +176,15 @@ def extract_stack(start=0):
     stack = []
     while f is not None:
         stack.append({
-            "line": f.f_lineno,
             "file": f.f_code.co_filename,
+            "line": f.f_lineno,
             "method": f.f_code.co_name
         })
         f = f.f_back
     return stack
 
 
-def _extract_traceback(start):
+def get_traceback(start):
     """
     SNAGGED FROM traceback.py
 

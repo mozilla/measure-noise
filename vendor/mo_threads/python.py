@@ -4,14 +4,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
 import os
 import platform
 
-from mo_dots import set_default, wrap
+from mo_dots import set_default, to_data
 from mo_json import json2value, value2json
 from mo_logs import Except, Log
 
@@ -24,7 +24,7 @@ DEBUG = True
 class Python(object):
 
     def __init__(self, name, config):
-        config = wrap(config)
+        config = to_data(config)
         if config.debug.logs:
             Log.error("not allowed to configure logging on other process")
 
@@ -38,7 +38,7 @@ class Python(object):
             cwd=os.getcwd(),
             shell=shell
         )
-        self.process.stdin.add(value2json(set_default({"debug": {"trace": True}}, config)))
+        self.process.stdin.add(value2json(set_default({}, config, {"debug": {"trace": True}})))
         status = self.process.stdout.pop()
         if status != '{"out":"ok"}':
             Log.error("could not start python\n{{error|indent}}", error=self.process.stderr.pop_all()+[status]+self.process.stdin.pop_all())
@@ -120,7 +120,7 @@ class Python(object):
     def __getattr__(self, item):
         def output(*args, **kwargs):
             if len(args):
-                if len(kwargs.keys()):
+                if kwargs.keys():
                     Log.error("Not allowed to use both args and kwargs")
                 return self._execute({item: args})
             else:
