@@ -11,7 +11,7 @@
     "analysis": {
         "download_limit": 1000,
         "local_db": {
-            "filename": "perf_summary.sqlite",
+            "filename": "deviant_summary.sqlite",
             "debug": false,
             "upgrade": false
         },

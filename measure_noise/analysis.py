@@ -51,7 +51,7 @@ def process(
         "push.time",
     )
 
-    values = pushes.value
+    values = list(pushes.value)
     title = "-".join(
         map(
             text,
@@ -234,7 +234,7 @@ def show_sorted(sort, limit, where=True, show_distribution=None, show_old=True):
 def main():
     global local_container, summary_table, candidates
     local_container = Container(kwargs=config.analysis.local_db)
-    summary_table = local_container.get_or_create_facts("perf_summary")
+    summary_table = local_container.get_or_create_facts("deviant_summary")
 
     if config.args.id:
         # EXIT EARLY AFTER WE GOT THE SPECIFIC IDS

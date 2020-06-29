@@ -30,6 +30,7 @@ PERFHERDER_THRESHOLD_TYPE_ABS = 1
 
 
 def find_segments(values, diff_type, diff_threshold):
+    values = list(values)
     if len(values) == 0:
         return (0,), (0,)
 
