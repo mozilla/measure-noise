@@ -1,3 +1,14 @@
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+from __future__ import absolute_import, division, unicode_literals
+
 import numpy as np
 
 import mo_math
@@ -54,7 +65,7 @@ def process(
     values = list(pushes.value)
     title = "-".join(
         map(
-            text,
+            str,
             [
                 sig.id,
                 sig.framework,
@@ -81,7 +92,7 @@ def process(
             )
         )
     )
-    old_medians = [0] + [
+    old_medians = [0.0] + [
         np.median(values[s:e]) for s, e in zip(old_segments[:-1], old_segments[1:])
     ]
     old_diffs = np.array(
