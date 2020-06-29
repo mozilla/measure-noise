@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from math import sqrt
 
-from numpy import log, mean, array, var
+from numpy import log, mean, array, std
 from scipy.stats import kurtosis, skew
 
 DEBUG = False
@@ -20,7 +20,7 @@ PROBLEM_THRESHOLD = 3  # NUMBER OF STANDARD DEVIATIONS BEFORE A PROBLEM IS HIGHL
 
 def moments(samples):
     data = array(samples)
-    return (len(data), mean(data), sqrt(var(data)), skew(data), kurtosis(data))
+    return len(data), mean(data), std(data), skew(data), kurtosis(data)
 
 
 def identity(v):

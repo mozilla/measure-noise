@@ -9,7 +9,7 @@
         "debug": false
     },
     "analysis": {
-        "download_limit": 1000,
+        "download_limit": 2,
         "local_db": {
             "filename": "deviant_summary.sqlite",
             "debug": false,
@@ -17,7 +17,7 @@
         },
         "signatures_sql": {
             "$concat": [
-                "SELECT s.id",
+                "SELECT s.signature_hash",
                 "FROM performance_signature s",
                 "WHERE",
                 "s.framework_id = 10 AND",

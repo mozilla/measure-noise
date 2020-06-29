@@ -13,14 +13,13 @@ import numpy as np
 
 import mo_math
 from jx_python import jx
-from jx_sqlite.container import Container
 from measure_noise import deviance, step_detector
 from measure_noise.extract_perf import get_all_signatures, get_signature, get_dataum
 from measure_noise.step_detector import find_segments, MAX_POINTS, MIN_POINTS
 from measure_noise.utils import assign_colors, histogram
 from mo_collections import left
 from mo_dots import Null, Data, coalesce, unwrap, listwrap
-from mo_future import text, first
+from mo_future import text
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
 from mo_threads import Queue, Thread
@@ -29,9 +28,9 @@ from mo_times.dates import parse
 
 IGNORE_TOP = 3  # WHEN CALCULATING NOISE OR DEVIANCE, IGNORE SOME EXTREME VALUES
 LOCAL_RETENTION = "3day"  # HOW LONG BEFORE WE REFRESH LOCAL DATABASE ENTRIES
-TOLLERANCE = (
-    MIN_POINTS
-)  # WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
+# WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
+TOLERANCE = MIN_POINTS
+LOOK_BACK = 3 * MONTH
 
 
 config = Null
@@ -41,12 +40,21 @@ candidates = Null
 
 
 def process(
-    sig_id, show=False, show_limit=MAX_POINTS, show_old=True, show_distribution=None
+    signature_hash, since, show=False, show_limit=MAX_POINTS, show_old=True, show_distribution=None
 ):
-    if not mo_math.is_integer(sig_id):
-        Log.error("expecting integer id")
-    sig = first(get_signature(config.database, sig_id))
-    data = get_dataum(config.database, sig_id)
+    """
+    :param signature_hash: The performance hash
+    :param since: Only data after this date
+    :param show:
+    :param show_limit:
+    :param show_old:
+    :param show_distribution:
+    :return:
+    """
+    if not mo_math.is_hex(signature_hash):
+        Log.error("expecting hexidecimal hash")
+    sig = get_signature(config.database, signature_hash)
+    data = get_dataum(config.database, signature_hash, since)
 
     min_date = (Date.today() - 3 * MONTH).unix
     pushes = jx.sort(
@@ -67,12 +75,11 @@ def process(
         map(
             str,
             [
-                sig.id,
                 sig.framework,
                 sig.suite,
                 sig.test,
                 sig.platform,
-                sig.repository.name,
+                sig.repository,
             ],
         )
     )
@@ -128,12 +135,12 @@ def process(
         max_extra_diff = mo_math.MAX(
             abs(d)
             for s, d in zip(new_segments, new_diffs)
-            if all(not (s - TOLLERANCE <= o <= s + TOLLERANCE) for o in old_segments)
+            if all(not (s - TOLERANCE <= o <= s + TOLERANCE) for o in old_segments)
         )
         max_missing_diff = mo_math.MAX(
             abs(d)
             for s, d in zip(old_segments, old_diffs)
-            if all(not (s - TOLLERANCE <= n <= s + TOLLERANCE) for n in new_segments)
+            if all(not (s - TOLERANCE <= n <= s + TOLERANCE) for n in new_segments)
         )
 
         Log.alert(
@@ -175,18 +182,18 @@ def is_diff(A, B):
         return True
 
     for a, b in zip(A, B):
-        if b - TOLLERANCE <= a <= b + TOLLERANCE:
+        if b - TOLERANCE <= a <= b + TOLERANCE:
             continue
         else:
             return True
     return False
 
 
-def update_local_database():
+def update_local_database(since):
     # GET EVERYTHING WE HAVE SO FAR
     exists = summary_table.query(
         {
-            "select": ["id", "last_updated"],
+            "select": ["signature_hash", "last_updated"],
             "where": {"and": [{"in": {"id": candidates.id}}, {"exists": "num_pushes"}]},
             "sort": "last_updated",
             "limit": 100000,
@@ -194,10 +201,10 @@ def update_local_database():
         }
     ).data
     # CHOOSE MISSING, THEN OLDEST, UP TO "RECENT"
-    missing = list(set(candidates.id) - set(exists.id))
+    missing = list(set(candidates.signature_hash) - set(exists.signature_hash))
 
     too_old = Date.today() - parse(LOCAL_RETENTION)
-    needs_update = missing + [e.id for e in exists if e.last_updated < too_old.unix]
+    needs_update = missing + [e.signature_hash for e in exists if e.last_updated < too_old.unix]
     Log.alert("{{num}} series are candidates for local update", num=len(needs_update))
 
     limited_update = Queue("sigs")
@@ -213,7 +220,7 @@ def update_local_database():
                 sig_id = limited_update.pop_one()
                 if not sig_id:
                     return
-                process(sig_id)
+                process(sig_id, since)
 
         threads = [Thread.run(text(i), loop) for i in range(3)]
         for t in threads:
@@ -227,9 +234,9 @@ def show_sorted(sort, limit, where=True, show_distribution=None, show_old=True):
         return
     tops = summary_table.query(
         {
-            "select": "id",
+            "select": "signature_hash",
             "where": {
-                "and": [{"in": {"id": candidates.id}}, {"gte": {"num_pushes": 1}}]
+                "and": [{"in": {"signature_hash": candidates.signature_hash}}, {"gte": {"num_pushes": 1}}]
                 + listwrap(where)
             },
             "sort": sort,
@@ -238,12 +245,16 @@ def show_sorted(sort, limit, where=True, show_distribution=None, show_old=True):
         }
     ).data
 
-    for id in tops:
-        process(id, show=True, show_distribution=show_distribution, show_old=show_old)
+    for signature_hash in tops:
+        process(signature_hash, show=True, show_distribution=show_distribution, show_old=show_old)
 
 
 def main():
     global local_container, summary_table, candidates
+
+    from jx_sqlite.container import Container
+
+    since = Date.today()-LOOK_BACK
     local_container = Container(kwargs=config.analysis.local_db)
     summary_table = local_container.get_or_create_facts("deviant_summary")
 
@@ -252,12 +263,12 @@ def main():
         if len(config.args.id) < 4:
             step_detector.SHOW_CHARTS = True
         for id in config.args.id:
-            process(id, show=True)
+            process(id, since=since, show=True)
         return
 
     candidates = get_all_signatures(config.database, config.analysis.signatures_sql)
     if not config.args.now:
-        update_local_database()
+        update_local_database(since)
 
     # DEVIANT
     show_sorted(

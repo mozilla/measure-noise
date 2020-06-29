@@ -36,6 +36,8 @@ class SQLScript(SQLScript_, SQL):
         if miss not in [None, NULL, FALSE, TRUE, ONE, ZERO]:
             if frum.lang != miss.lang:
                 Log.error("logic error")
+        if expr == None:
+            Log.error('expecting expr')
 
         self.miss = coalesce(
             miss, FALSE

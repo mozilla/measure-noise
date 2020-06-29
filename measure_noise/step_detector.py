@@ -14,8 +14,7 @@ from numpy.lib.stride_tricks import as_strided
 from scipy.stats import stats, rankdata
 
 from measure_noise.utils import plot
-from mo_collections import not_right, not_left
-from mo_dots import Data
+from mo_dots import Data, coalesce
 from mo_logs import Except
 
 SHOW_CHARTS = False
@@ -37,15 +36,18 @@ weight_radius = len(median_weight) // 2
 SHOW_CHARTS and plot(median_weight, title="WEIGHT")
 
 PERFHERDER_THRESHOLD_TYPE_ABS = 1
+DEFAULT_THRESHOLD = 0.03
 
 
 def find_segments(values, diff_type, diff_threshold):
     values = list(values)
     if len(values) == 0:
         return (0,), (0,)
+    diff_threshold = coalesce(diff_threshold, DEFAULT_THRESHOLD)
 
-    values = np.array(values)
-    logs = np.log(values)
+    values = logs = np.array(values)
+    if np.all(values > 0):
+        logs = np.log(values)
     ranks = rankdata(values)
 
     SHOW_CHARTS and plot(ranks/len(values), title="RANKS")
@@ -65,9 +67,9 @@ def find_segments(values, diff_type, diff_threshold):
     for i, _ in enumerate(segments[:-2]):
         s, m, e = segments[i], segments[i + 1], segments[i + 2]
         m_score, t_score, best_mid = jitter_MWU(logs, s, m, e)
-        if m_score.pvalue > P_THRESHOLD:
+        if m_score.pvalue > P_THRESHOLD or s == best_mid or e == best_mid:
             # NO EVIDENCE OF DIFFERENCE, COLLAPSE SEGMENT
-            segments[i + 1] = segments[i]
+            segments[i + 1] = s
             continue
         if diff_type == PERFHERDER_THRESHOLD_TYPE_ABS:
             diff_percent = np.abs(
@@ -75,13 +77,18 @@ def find_segments(values, diff_type, diff_threshold):
             )
             if diff_percent < diff_threshold:
                 # DIFFERENCE IS TOO SMALL
-                segments[i + 1] = segments[i]
+                segments[i + 1] = s
                 continue
         diff_percent = np.abs(
             np.median(values[best_mid:e]) / np.median(values[s:best_mid]) - 1
         )
 
-        if diff_percent < diff_threshold / 100:
+        try:
+            too_small = diff_percent < diff_threshold / 100
+        except Exception as cause:
+            raise cause
+
+        if too_small:
             # DIFFERENCE IS TOO SMALL
             segments[i + 1] = segments[i]
             continue
@@ -131,6 +138,10 @@ no_good_edge = Data(pvalue=1)
 
 
 def jitter_MWU(values, start, mid, end):
+    """
+    RETURN A BETTER MIDPOINT< ACCOUNTING FOR t-test RESULTS
+    """
+
     # ADD SOME CONSTRAINTS TO THE RANGE OF VALUES TESTED
     m_start = min(mid, max(start + MIN_POINTS, mid - JITTER))
     m_end = max(mid, min(mid + JITTER, end - MIN_POINTS))
@@ -166,23 +177,25 @@ def jitter_MWU(values, start, mid, end):
     except Exception as e:
         e = Except.wrap(e)
         if "All numbers are identical" in e:
-            return Data(pvalue=0), Data(pvalue=0), mids[0]
+            return no_good_edge, no_good_edge, mids[0]
         raise e
 
     # TOTAL SUM-OF-SQUARES
-    if m_start - start == 0:
-        # WE CAN NOT OFFSET BY ONE, SO WE ADD A DUMMY VALUE
-        v_prefix = np.array([np.nan] + list(not_right(cumSS(values[start:m_end]), 1)))
-    else:
-        # OFFSET BY ONE, WE WANT cumSS OF ALL **PREVIOUS** VALUES
-        v_prefix = not_right(
-            not_left(cumSS(values[start:m_end]), m_start - start - 1), 1
-        )
-    v_suffix = not_right(cumSS(values[m_start:end][::-1])[::-1], end - m_end)
-    v_score = v_prefix + v_suffix
+    # DO NOT KNOW WHAT THIS WAS DOING
+    # if m_start - start == 0:
+    #     # WE CAN NOT OFFSET BY ONE, SO WE ADD A DUMMY VALUE
+    #     v_prefix = np.array([np.nan] + list(not_right(cumSS(values[start:m_end]), 1)))
+    # else:
+    #     # OFFSET BY ONE, WE WANT cumSS OF ALL **PREVIOUS** VALUES
+    #     v_prefix = not_right(
+    #         not_left(cumSS(values[start:m_end]), m_start - start - 1), 1
+    #     )
+    # v_suffix = not_right(cumSS(values[m_start:end][::-1])[::-1], end - m_end)
+    # v_score = v_prefix + v_suffix
+    # pvalue = np.sqrt(m_score[:, 1] * v_score)  # GOEMEAN OF SCORES
 
     # PICK LOWEST
-    pvalue = np.sqrt(m_score[:, 1] * v_score)  # GOEMEAN OF SCORES
+    pvalue = np.sqrt(m_score[:, 1]*t_score[:,1])
     best = np.argmin(pvalue)
 
     return Data(pvalue=m_score[best, 1]), Data(pvalue=t_score[best, 1]), mids[best]

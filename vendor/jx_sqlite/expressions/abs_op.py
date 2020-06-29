@@ -9,18 +9,29 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import AbsOp as AbsOp_
+from jx_base.expressions import AbsOp as AbsOp_, TRUE
 from jx_sqlite.expressions._utils import SQLang, check
 from jx_sqlite.expressions.sql_script import SQLScript
-from mo_json import NUMBER
+from jx_sqlite.sqlite import sql_call
+from mo_json import NUMBER, IS_NULL
+from mo_sql import SQL_NULL
 
 
 class AbsOp(AbsOp_):
     @check
     def to_sql(self, schema, not_null=False, boolean=False):
         expr = SQLang[self.term].partial_eval().to_sql(schema)[0].sql.n
+        if not expr:
+            return SQLScript(
+                expr=SQL_NULL,
+                data_type=IS_NULL,
+                frum=self,
+                miss=TRUE,
+                schema=schema,
+            )
+
         return SQLScript(
-            expr="ABS(" + expr + ")",
+            expr=sql_call("ABS", expr),
             data_type=NUMBER,
             frum=self,
             miss=self.missing(),

@@ -9,15 +9,14 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_sqlite.sqlite import quote_column
-
-from jx_base.expressions import Variable as Variable_
+from jx_base.expressions import Variable as Variable_, NULL
 from jx_base.queries import get_property_name
-from jx_sqlite.utils import GUID, quoted_GUID
 from jx_sqlite.expressions._utils import json_type_to_sql_type, check
+from jx_sqlite.sqlite import quote_column
+from jx_sqlite.utils import GUID, quoted_GUID
 from mo_dots import ROOT_PATH, relative_field, wrap
 from mo_json import BOOLEAN, OBJECT
-from mo_sql import SQL_IS_NOT_NULL, SQL_NULL, SQL_TRUE
+from mo_sql import SQL_IS_NOT_NULL, SQL_TRUE
 
 
 class Variable(Variable_):
@@ -30,10 +29,7 @@ class Variable(Variable_):
             )
         cols = schema.leaves(var_name)
         if not cols:
-            # DOES NOT EXIST
-            return wrap(
-                [{"name": ".", "sql": {"0": SQL_NULL}, "nested_path": ROOT_PATH}]
-            )
+            return self.lang[NULL].to_sql(schema)
         acc = {}
         if boolean:
             for col in cols:

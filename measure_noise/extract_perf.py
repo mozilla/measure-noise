@@ -9,10 +9,11 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_mysql.mysql import quote_list, MySQL, quote_value
 from mo_dots import listwrap
-from mo_future import text
+from mo_future import first
 from mo_logs.strings import expand_template
-from jx_mysql.mysql import MySQL, quote_list
+from mo_sql import SQL
 
 
 def get_all_signatures(db_config, sql):
@@ -21,25 +22,21 @@ def get_all_signatures(db_config, sql):
     """
     db = MySQL(db_config)
     with db:
-        return db.query(text(sql))
+        return db.query(sql)
 
 
 def get_signature(db_config, signature_id):
     db = MySQL(db_config)
     with db:
-        return db.query(expand_template(signature_sql, quote_list(listwrap(signature_id))))
-
-
-def get_dataum(db_config, signature_id):
-    db = MySQL(db_config)
-    with db:
-        return db.query(expand_template(datum_sql, quote_list(listwrap(signature_id))))
+        return first(
+            db.query(expand_template(signature_sql, quote_list(listwrap(signature_id))))
+        )
 
 
 signature_sql = """
     SELECT
         t1.id , 
-        t1.signature_hash , 
+        t1.signature_hash, 
         t1.suite ,
         t1.test ,
         UNIX_TIMESTAMP(t1.last_updated) as last_updated,
@@ -60,7 +57,7 @@ signature_sql = """
         t3.option_collection_hash as `option_collection.hash`,
         t4.name AS framework, 
         t5.platform AS platform, 
-        t6.name AS `repository.name`
+        t6.name AS `repository`
     FROM
         performance_signature t1
     LEFT JOIN
@@ -74,11 +71,18 @@ signature_sql = """
     LEFT JOIN
         repository AS t6 ON t6.id = t1.repository_id
     WHERE
-        t1.id IN {{signature}} 
+        t1.signature_hash IN {{signature}}
+    ORDER BY 
+        t1.last_updated DESC
 """
 
 
-datum_sql = """
+def get_dataum(db_config, signature_id, since):
+    db = MySQL(db_config)
+    with db:
+        return db.query(
+            SQL(
+                f"""
         SELECT
             d.id,
             d.value,
@@ -113,6 +117,8 @@ datum_sql = """
             a.`last_updated` AS `alert.last_updated`
         FROM
             performance_datum AS d
+        JOIN 
+            performance_signature sig on sig.id=d.signature_id
         LEFT JOIN
             job AS t3 ON t3.id = d.job_id
         LEFT JOIN
@@ -122,10 +128,16 @@ datum_sql = """
         LEFT JOIN
             performance_alert_summary s on s.repository_id = p.repository_id and s.push_id=p.id
         LEFT JOIN
-            performance_alert a on a.summary_id = s.id AND a.series_signature_id = d.signature_id AND a.manually_created=0
+            performance_alert a 
+        ON 
+            a.summary_id = s.id AND 
+            a.series_signature_id = d.signature_id AND 
+            a.manually_created=0
         WHERE
-            p.time > DATE_ADD(DATE(NOW()), INTERVAL -3 MONTH) AND
-            d.signature_id in {{signature}}
+            p.time > {quote_value(since)} AND
+            sig.signature_hash in {quote_list(listwrap(signature_id))}
         ORDER BY
             p.time DESC
-    """
+        """
+            )
+        )
