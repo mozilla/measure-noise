@@ -90,7 +90,7 @@ datum_sql = """
             a.`is_regression` AS `alert.isregression`,
             a.`status` AS `alert.status`,
             a.`amount_pct` AS `alert.amount_pct`,
-            a.`amount_abs` AS `alert.anount_abs`,
+            a.`amount_abs` AS `alert.amount_abs`,
             a.`prev_value` AS `alert.prev_value`,
             a.`new_value` AS `alert.new_value`,
             a.`t_value` AS `alert.t_value`,
