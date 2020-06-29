@@ -99,15 +99,8 @@ class FlatList(list):
                 _late_import()
             Log.error("problem", cause=e)
 
-    def __getattribute__(self, key):
-        try:
-            if key != "index":  # WE DO NOT WANT TO IMPLEMENT THE index METHOD
-                output = _get(self, key)
-                return output
-        except Exception as e:
-            if key[0:2] == "__":  # SYSTEM LEVEL ATTRIBUTES CAN NOT BE USED FOR SELECT
-                raise e
-        return FlatList.get(self, key)
+    def __getattr__(self, key):
+        return self.get(key)
 
     def get(self, key):
         """
@@ -248,7 +241,7 @@ class FlatList(list):
 
         return FlatList(_get_list(self)[-num:])
 
-    def left(self, num=None):
+    def limit(self, num=None):
         """
         NOT REQUIRED, BUT EXISTS AS OPPOSITE OF right()
         """

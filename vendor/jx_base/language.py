@@ -7,9 +7,9 @@
 #
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import, division, unicode_literals
 
 from copy import copy
+from datetime import datetime
 from decimal import Decimal
 from math import isnan
 
@@ -239,6 +239,7 @@ TYPE_ORDER = {
     float: 1,
     Decimal: 1,
     Date: 1,
+    datetime: 1,
     long: 1,
     text: 3,
     list: 4,
