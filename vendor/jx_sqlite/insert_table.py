@@ -291,6 +291,7 @@ class InsertTable(BaseTable):
                         es_type=json_type_to_sqlite_type.get(jx_type, jx_type),
                         es_column=typed_column(cname, json_type_to_sql_type.get(jx_type)),
                         es_index=table,
+                        cardinality=0,
                         nested_path=nested_path,
                         last_updated=Date.now()
                     )

@@ -55,7 +55,7 @@ from mo_sql import (
 from mo_threads import Lock, Queue, Thread, Till
 from mo_times import Date, Duration, Timer
 
-DEBUG = False
+DEBUG = True
 TRACE = True
 
 FORMAT_COMMAND = "Running command from \"{{file}}:{{line}}\"\n{{command|limit(1000)|indent}}"

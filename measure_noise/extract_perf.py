@@ -25,11 +25,11 @@ def get_all_signatures(db_config, sql):
         return db.query(sql)
 
 
-def get_signature(db_config, signature_id):
+def get_signature(db_config, signature_hash):
     db = MySQL(db_config)
     with db:
         return first(
-            db.query(expand_template(signature_sql, quote_list(listwrap(signature_id))))
+            db.query(expand_template(signature_sql, quote_list(listwrap(signature_hash))))
         )
 
 
