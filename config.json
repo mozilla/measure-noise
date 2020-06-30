@@ -6,14 +6,35 @@
             "ca": "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
         },
         "$ref": "~/private.json#treeherder",
-        "debug": false
+        "debug": false,
+    },
+    "destination": {
+        "account_info": {
+            "$ref": "file:///e:/moz-fx-dev-ekyle-treeherder-a838a7718652.json"
+        },
+        "dataset": "dev-scheduling",
+        "table": "schedulers",
+        "schema": {
+            "push.id._i_": "integer",
+            "push.date._t_": "time",
+            "etl.timestamp._t_": "time",
+        },
+        "top_level_fields": {
+            "push.id": "_push_id",
+            "push.date": "_push_date",
+            "etl.timestamp": "_etl_timestamp",
+        },
+        "partition": {"field": "push.date", "expire": "2year"},
+        "id": {"field": "push.id", "version": "etl.timestamp"},
+        "cluster": ["push.id"],
+        "sharded": true,
     },
     "analysis": {
         "download_limit": 2,
         "local_db": {
             "filename": "deviant_summary.sqlite",
             "debug": false,
-            "upgrade": false
+            "upgrade": false,
         },
         "signatures_sql": {
             "$concat": [
@@ -24,21 +45,16 @@
                 "(s.should_alert is NULL or s.should_alert <> 0) AND",
                 "(s.test IS NULL or s.test='' or s.test=s.suite) AND",
                 "s.repository_id = 77  -- autoland",
-                "GROUP BY s.id"
+                "GROUP BY s.id",
             ],
-            "separator": "\n"
-        }
+            "separator": "\n",
+        },
     },
     "constants": {
         "mo_http.http.default_headers": {
             "Referer": "https://github.com/mozilla/measure-noise"
         },
-        "measure_noise.step_detector.SHOW_CHARTS": false
+        "measure_noise.step_detector.SHOW_CHARTS": false,
     },
-    "debug": {
-        "trace": true,
-        "cprofile": false
-    }
+    "debug": {"trace": true, "cprofile": false},
 }
-
-

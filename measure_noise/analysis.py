@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import numpy as np
 
 import mo_math
+from jx_bigquery import bigquery
 from jx_python import jx
 from measure_noise import deviance, step_detector
 from measure_noise.extract_perf import get_all_signatures, get_signature, get_dataum
@@ -31,10 +32,6 @@ LOCAL_RETENTION = "3day"  # HOW LONG BEFORE WE REFRESH LOCAL DATABASE ENTRIES
 # WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
 TOLERANCE = MIN_POINTS
 LOOK_BACK = 3 * MONTH
-
-
-local_container = Null
-candidates = Null
 
 
 def process(
@@ -109,7 +106,8 @@ def process(
         )
     )
     old_medians = [0.0] + [
-        np.median(values[s:e]) for s, e in zip(old_segments[:-1], old_segments[1:])
+        np.median(values[s:e])
+        for s, e in zip(old_segments[:-1], old_segments[1:])
     ]
     old_diffs = np.array(
         [b / a - 1 for a, b in zip(old_medians[:-1], old_medians[1:])] + [0]
@@ -184,6 +182,11 @@ def process(
             show_old and assign_colors(values, old_segments, title="OLD " + title)
             assign_colors(values, new_segments, title="NEW " + title)
 
+
+    if isinstance(destination, bigquery.Table):
+        Log.note("BigQuery summary not updated")
+        return
+
     destination.upsert(
         where={"eq": {"id": sig.id}},
         doc=Data(
@@ -220,7 +223,10 @@ def is_diff(A, B):
     return False
 
 
-def update_local_database(config, destination, since):
+def update_local_database(config, destination, candidates, since):
+    if isinstance(destination, bigquery.Table):
+        Log.error("Only the ETL should fill the bigquery table")
+
     # GET EVERYTHING WE HAVE SO FAR
     exists = destination.query(
         {
@@ -267,7 +273,7 @@ def show_sorted(since, source, destination, sort, limit, where=True, show_distri
         {
             "select": "id",
             "where": {
-                "and": [{"in": {"id": candidates.signature_hash}}, {"gte": {"num_pushes": 1}}]
+                "and": [{"gte": {"num_pushes": 1}}]
                 + listwrap(where)
             },
             "sort": sort,
@@ -289,13 +295,12 @@ def show_sorted(since, source, destination, sort, limit, where=True, show_distri
 
 
 def main():
-    global local_container, candidates
-
-    from jx_sqlite.container import Container
-
     since = Date.today()-LOOK_BACK
-    local_container = Container(kwargs=config.analysis.local_db)
-    summary_table = local_container.get_or_create_facts("deviant_summary")
+
+    # SETUP DESTINATION
+    summary_table = bigquery.Dataset(config.destination).get_or_create_table(config.destination)
+    # ENSURE SHARDS ARE MERGED
+    summary_table.merge_shards()
 
     if config.args.id:
         # EXIT EARLY AFTER WE GOT THE SPECIFIC IDS
@@ -305,9 +310,9 @@ def main():
             process(signature_hash, since=since, source=config.database, destination=summary_table, show=True)
         return
 
-    candidates = get_all_signatures(config.database, config.analysis.signatures_sql)
     if not config.args.now:
-        update_local_database(config=config, destination=summary_table, since=since)
+        candidates = get_all_signatures(config.database, config.analysis.signatures_sql)
+        update_local_database(config=config, destination=summary_table, candidates=candidates, since=since)
 
     # DEVIANT
     show_sorted(

@@ -18,13 +18,13 @@ from jx_mysql.mysql import MySQL
 from jx_python import jx
 from measure_noise import deviance
 from measure_noise.extract_perf import get_signature, get_dataum
-from measure_noise.step_detector import find_segments
-from mo_dots import Null, Data, coalesce, unwrap, listwrap
+from measure_noise.step_detector import find_segments, MAX_POINTS
+from mo_dots import Data, unwrap, dict_to_data
 from mo_future import text
 from mo_json import NUMBER, python_type_to_json_type
 from mo_logs import Log
-from mo_sql import SQL
 from mo_math.stats import median
+from mo_sql import SQL
 from mo_threads import Till, Queue, Thread
 from mo_times import Duration, Timer, Date, MONTH
 
@@ -227,13 +227,9 @@ def main(config):
         for t in threads:
             t.join()
 
-    destination.merge_shards()
-
-    Log.note("Local database is up to date")
+        destination.merge_shards()
 
 
 if __name__ == "__main__":
     with Log.start(app_name="etl") as config:
         main(config)
-
-
