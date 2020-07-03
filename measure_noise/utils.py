@@ -38,9 +38,9 @@ def get_range(value):
     if t_max == t_min:
         t_max = t_min + 1
 
-    if t_min >= 0:
-        t_min = 0 - ((t_max-t_min)/10)
-    t_max = t_max * 1.1
+    padding = max(t_max / 10, (t_max - t_min) / 10)
+    t_min = t_min - padding
+    t_max = t_max + padding
 
     return t_min, t_max
 
