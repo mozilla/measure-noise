@@ -168,6 +168,13 @@ def schema_type(value):
     return v, json_type_to_inserter_type[jt], jt
 
 
+def untype_path(path):
+    """
+    EXPECTING PYTHON-SIDE PATH (WITHOUT __ ESCAPING)
+    """
+    return join_field(c for c in split_field(path) if c not in typed_to_bq_type)
+
+
 def untyped(value):
     """
     REMOVE TYPING AND ESCAPING FROM THE value

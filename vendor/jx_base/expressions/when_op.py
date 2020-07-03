@@ -32,7 +32,7 @@ from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
 from mo_dots import coalesce
-from mo_json import INTEGER, NUMBER, OBJECT, NUMBER_TYPES
+from mo_json import OBJECT, same_json_type, merge_json_type
 from mo_logs import Log
 
 
@@ -48,10 +48,8 @@ class WhenOp(Expression):
             self.data_type = self.els_.type
         elif self.els_ is NULL:
             self.data_type = self.then.type
-        elif self.then.type == self.els_.type:
-            self.data_type = self.then.type
-        elif self.then.type in NUMBER_TYPES and self.els_.type in NUMBER_TYPES:
-            self.data_type = NUMBER
+        elif same_json_type(self.then.type, self.els_.type):
+            self.data_type = merge_json_type(self.then.type, self.els_.type)
         else:
             self.data_type = OBJECT
 

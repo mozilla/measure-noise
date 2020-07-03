@@ -9,19 +9,14 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import MissingOp as MissingOp_
+from jx_base.expressions import MissingOp as MissingOp_, FALSE
 from jx_base.language import is_op
-from jx_bigquery.expressions._utils import BQLang, check
-from mo_dots import wrap
+from jx_bigquery.expressions._utils import BQLang, check, BQLScript
+from mo_json import OBJECT, BOOLEAN
 from mo_sql import (
-    SQL_AND,
-    SQL_EMPTY_STRING,
-    SQL_FALSE,
     SQL_IS_NULL,
-    SQL_OR,
-    SQL_TRUE,
     sql_iso,
-)
+    ConcatSQL)
 
 
 class MissingOp(MissingOp_):
@@ -35,24 +30,14 @@ class MissingOp(MissingOp_):
 
         value_sql = value.to_bq(schema)
 
-        if len(value_sql) > 1:
-            return wrap([{"name": ".", "sql": {"b": SQL_FALSE}}])
+        if value_sql.type == OBJECT:
+            return FALSE.to_bq(schema)
 
-        acc = []
-        for c in value_sql:
-            for t, v in c.sql.items():
-                if t == "b":
-                    acc.append(sql_iso(v) + SQL_IS_NULL)
-                if t == "s":
-                    acc.append(
-                        sql_iso(sql_iso(v) + SQL_IS_NULL)
-                        + SQL_OR
-                        + sql_iso(sql_iso(v) + "=" + SQL_EMPTY_STRING)
-                    )
-                if t == "n":
-                    acc.append(sql_iso(v) + SQL_IS_NULL)
-
-        if not acc:
-            return wrap([{"name": ".", "sql": {"b": SQL_TRUE}}])
-        else:
-            return wrap([{"name": ".", "sql": {"b": SQL_AND.join(acc)}}])
+        return BQLScript(
+            data_type=BOOLEAN,
+            expr=ConcatSQL(sql_iso(value_sql), SQL_IS_NULL),
+            frum=self,
+            miss=FALSE,
+            many=False,
+            schema=schema
+        )

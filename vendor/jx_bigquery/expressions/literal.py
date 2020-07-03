@@ -9,26 +9,22 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_bigquery.sql import quote_value
-
 from jx_base.expressions import Literal as Literal_
 from jx_bigquery.expressions._utils import check
-from mo_dots import wrap
-from mo_future import text
-from mo_math import is_number
+from jx_bigquery.expressions.bql_script import BQLScript
+from mo_json import python_type_to_json_type
 
 
 class Literal(Literal_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
+        from jx_bigquery.sql import quote_value
         value = self.value
-        if value == None:
-            return wrap([{"name": "."}])
-        elif isinstance(value, text):
-            return wrap([{"name": ".", "sql": {"s": quote_value(value)}}])
-        elif is_number(value):
-            return wrap([{"name": ".", "sql": {"n": quote_value(value)}}])
-        elif value in [True, False]:
-            return wrap([{"name": ".", "sql": {"b": quote_value(value)}}])
-        else:
-            return wrap([{"name": ".", "sql": {"j": quote_value(self.json)}}])
+        return BQLScript(
+            data_type=python_type_to_json_type[value.__class__],
+            expr=quote_value(value),
+            frum=self,
+            miss=self.missing(),
+            many=False,
+            schema=schema
+        )

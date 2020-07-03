@@ -12,6 +12,7 @@ from jx_bigquery.expressions import _utils
 from jx_bigquery.expressions._utils import json_type_to_bq_type, BQLang, check
 from mo_dots import coalesce, wrap
 from mo_future import PY2, text
+from mo_json import _merge_order
 from mo_logs import Log
 from mo_sql import (
     SQL,
@@ -34,10 +35,10 @@ class BQLScript(SQLScript_, SQL):
         if miss not in [None, NULL, FALSE, TRUE, ONE, ZERO]:
             if frum.lang != miss.lang:
                 Log.error("logic error")
-
-        self.miss = coalesce(
-            miss, FALSE
-        )  # Expression that will return true/false to indicate missing result
+        if data_type not in _merge_order:
+            Log.error("logic error")
+        # miss is an expression that will return true/false to indicate missing result
+        self.miss = coalesce(miss, FALSE)
         self.data_type = data_type  # JSON DATA TYPE
         self.expr = expr
         self.many = many  # True if script returns multi-value
@@ -113,7 +114,7 @@ class BQLScript(SQLScript_, SQL):
         return self.miss
 
     def __data__(self):
-        return {"script": self.script}
+        return {"script": text(self.sql)}
 
     def __eq__(self, other):
         if not isinstance(other, SQLScript_):

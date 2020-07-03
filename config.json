@@ -8,29 +8,37 @@
         "$ref": "~/private.json#treeherder",
         "debug": false,
     },
-    "destination": {
+    "deviant_summary": {
         "account_info": {
             "$ref": "file:///e:/moz-fx-dev-ekyle-treeherder-a838a7718652.json"
         },
-        "dataset": "dev-scheduling",
-        "table": "schedulers",
+        "dataset": "dev-deviant",
+        "table": "noise",
         "schema": {
-            "push.id._i_": "integer",
-            "push.date._t_": "time",
-            "etl.timestamp._t_": "time",
+            "id": "string",
+            "push.id": "integer",
+            "push.date": "time",
+            "last_updated": "time"
         },
         "top_level_fields": {
-            "push.id": "_push_id",
-            "push.date": "_push_date",
-            "etl.timestamp": "_etl_timestamp",
+            "id": "id",
+            "last_updated": "last_updated"
         },
-        "partition": {"field": "push.date", "expire": "2year"},
-        "id": {"field": "push.id", "version": "etl.timestamp"},
-        "cluster": ["push.id"],
-        "sharded": true,
+        "partition": {
+            "field": "last_updated",
+            "expire": "1year"
+        },
+        "id": {
+            "field": "id",
+            "version": "last_updated"
+        },
+        "cluster": [
+            "id"
+        ],
+        "sharded": true
     },
     "analysis": {
-        "download_limit": 2,
+        "download_limit": 10,
         "local_db": {
             "filename": "deviant_summary.sqlite",
             "debug": false,

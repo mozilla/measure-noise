@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+import numpy as np
+
 from mo_dots import Null
 from mo_math import mod
 
@@ -18,22 +20,48 @@ go = Null
 def _late_import():
     global go
     import plotly.graph_objects as go
+
     _ = go
+
+
+def get_range(value):
+    """
+    RETURN THE RANGE THAT SHOWS MOST POINTS
+    """
+    all_values = np.array(value)
+    num_raw_samples = len(value)
+    ignore = int(num_raw_samples / 20)
+    trimmed_segment = all_values[np.argsort(all_values)[ignore:-ignore]]
+    t_min, t_max = np.min(trimmed_segment), np.max(trimmed_segment)
+    # a_max = np.max(all_values)
+
+    if t_max == t_min:
+        t_max = t_min + 1
+
+    if t_min >= 0:
+        t_min = 0 - ((t_max-t_min)/10)
+    t_max = t_max * 1.1
+
+    return t_min, t_max
 
 
 def histogram(values, title=None):
     _late_import()
-    fig = go.Figure(
-        go.Histogram(x=list(values))
-    )
+    fig = go.Figure(go.Histogram(x=list(values)))
     fig.update_layout(title=title)
     fig.show()
 
 
 def plot(data, title=None):
     _late_import()
+
     fig = go.Figure(
-        data=go.Scatter(x=tuple(range(0, len(data))), y=data, mode="markers")
+        data=go.Scatter(
+            x=tuple(range(0, len(data))),
+            y=data,
+            mode="markers",
+            yaxis=dict(range=get_range(data), constrain="domain"),
+        )
     )
     fig.update_layout(title=title)
     fig.show()
@@ -59,6 +87,7 @@ def assign_colors(values, segments, title):
         )
     )
     fig.update_layout(title=title)
+    fig.update_layout(yaxis=dict(range=get_range(values), constrain="range"))
     fig.show()
 
 

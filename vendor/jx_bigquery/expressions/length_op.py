@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import LengthOp as LengthOp_
 from jx_base.expressions.literal import is_literal
 from jx_bigquery.expressions._utils import BQLang, check
-from jx_bigquery.sql import quote_value
 from mo_dots import Null, wrap
 from mo_future import text
 from mo_json import value2json
@@ -24,6 +23,8 @@ class LengthOp(LengthOp_):
     def to_bq(self, schema, not_null=False, boolean=False):
         term = BQLang[self.term].partial_eval()
         if is_literal(term):
+            from jx_bigquery.sql import quote_value
+
             val = term.value
             if isinstance(val, text):
                 sql = quote_value(len(val))

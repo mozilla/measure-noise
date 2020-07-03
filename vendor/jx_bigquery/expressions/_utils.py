@@ -18,7 +18,7 @@ from jx_base.expressions import (
     NullOp,
     TrueOp,
     extend,
-)
+    TRUE)
 from mo_dots import wrap, FlatList, is_data
 from mo_future import decorate
 from mo_json import BOOLEAN, NESTED, OBJECT, STRING, NUMBER, IS_NULL
@@ -48,42 +48,51 @@ def check(func):
     def to_bq(self, schema, not_null=False, boolean=False, **kwargs):
         if kwargs.get("many") != None:
             Log.error("not expecting many")
-        try:
-            output = func(self, schema, not_null, boolean)
-        except Exception as e:
-            Log.error("not expected", cause=e)
-        if isinstance(output, BQLScript):
-            return output
-        if not isinstance(output, FlatList):
-            Log.error("expecting FlatList")
-        if not is_data(output[0].sql):
-            Log.error("expecting Data")
-        for k, v in output[0].sql.items():
-            if k not in {"b", "n", "s", "j", "0"}:
-                Log.error("expecting datatypes")
-            if not isinstance(v, SQL):
-                Log.error("expecting text")
-        return output
+        output = func(self, schema, not_null, boolean)
+        if not isinstance(output, BQLScript):
+            Log.error("Expecting BQLScript")
 
+        return output
     return to_bq
 
 
 @extend(NullOp)
 @check
 def to_bq(self, schema, not_null=False, boolean=False):
-    return wrap([{"name": ".", "sql": {"0": SQL_NULL}}])
+    return BQLScript(
+        data_type=BOOLEAN,
+        expr=SQL_NULL,
+        frum=self,
+        miss=TRUE,
+        many=False,
+        schema=schema
+    )
 
 
 @extend(TrueOp)
 @check
 def to_bq(self, schema, not_null=False, boolean=False):
-    return wrap([{"name": ".", "sql": {"b": SQL_TRUE}}])
+    return BQLScript(
+        data_type=BOOLEAN,
+        expr=SQL_TRUE,
+        frum=self,
+        miss=FALSE,
+        many=False,
+        schema=schema
+    )
 
 
 @extend(FalseOp)
 @check
 def to_bq(self, schema, not_null=False, boolean=False):
-    return wrap([{"name": ".", "sql": {"b": SQL_FALSE}}])
+    return BQLScript(
+        data_type=BOOLEAN,
+        expr=SQL_FALSE,
+        frum=self,
+        miss=FALSE,
+        many=False,
+        schema=schema
+    )
 
 
 def _inequality_to_bq(self, schema, not_null=False, boolean=False, many=True):

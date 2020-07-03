@@ -37,7 +37,6 @@ _jx = None
 _Column = None
 
 
-
 def _late_import():
     global _jx
     global _Column
@@ -354,7 +353,9 @@ def _normalize_select(select, frum, schema=None):
                 },
                 canonical
             )
-            for c in frum.get_leaves()
+            for c in schema.leaves('.')
+            # TOP LEVEL COLUMNS ONLY
+            if len(c.nested_path) == 1
         ])
     elif is_text(select.value):
         if select.value.endswith(".*"):

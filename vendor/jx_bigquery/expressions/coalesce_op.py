@@ -9,27 +9,29 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import CoalesceOp as CoalesceOp_
+from jx_base.expressions import CoalesceOp as CoalesceOp_, NULL
 from jx_bigquery.expressions._utils import BQLang, check
-from mo_dots import wrap
-from mo_sql import sql_coalesce
+from jx_bigquery.expressions.and_op import AndOp
+from jx_bigquery.expressions.bql_script import BQLScript
+from jx_bigquery.expressions.missing_op import MissingOp
+from jx_bigquery.sql import sql_call
+from mo_json import OBJECT, merge_json_type
 
 
 class CoalesceOp(CoalesceOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
-        acc = {"b": [], "s": [], "n": []}
-
+        sql = []
+        if not self.terms:
+            return NULL.to_bq(schema)
         for term in self.terms:
-            for t, v in BQLang[term].to_bq(schema)[0].sql.items():
-                acc[t].append(v)
+            sql.append(BQLang[term].to_bq(schema))
 
-        output = {}
-        for t, terms in acc.items():
-            if not terms:
-                continue
-            elif len(terms) == 1:
-                output[t] = terms[0]
-            else:
-                output[t] = sql_coalesce(terms)
-        return wrap([{"name": ".", "sql": output}])
+        return BQLScript(
+            data_type=merge_json_type(*(t.type for t in sql)),
+            expr=sql_call("COALESCE", *sql),
+            frum=self,
+            miss=AndOp([MissingOp(t) for t in self.terms]).partial_eval(),
+            many=False,
+            schema=schema
+        )

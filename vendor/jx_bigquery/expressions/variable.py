@@ -9,14 +9,18 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_bigquery.sql import quote_column, GUID, ApiName
-
-from jx_base.expressions import Variable as Variable_
-from jx_base.queries import get_property_name
-from jx_bigquery.expressions._utils import json_type_to_bq_type, check
-from mo_dots import ROOT_PATH, relative_field, wrap
-from mo_json import BOOLEAN, OBJECT
-from mo_sql import SQL_IS_NOT_NULL, SQL_NULL, SQL_TRUE
+from jx_base.expressions import Variable as Variable_, FALSE, TRUE
+from jx_bigquery.expressions._utils import check
+from jx_bigquery.expressions.bql_script import BQLScript
+from jx_bigquery.expressions.coalesce_op import CoalesceOp
+from jx_bigquery.expressions.missing_op import MissingOp
+from jx_bigquery.sql import quote_column, GUID, ApiName, escape_name
+from jx_bigquery.typed_encoder import untype_path
+from mo_dots import relative_field, split_field
+from mo_future import first
+from mo_json import STRING, OBJECT
+from mo_logs import Log
+from mo_sql import SQL_NULL
 
 
 class Variable(Variable_):
@@ -24,60 +28,41 @@ class Variable(Variable_):
     def to_bq(self, schema, not_null=False, boolean=False, many=True):
         var_name = self.var
         if var_name == GUID:
-            return wrap(
-                [
-                    {
-                        "name": ".",
-                        "sql": {"s": quote_column(ApiName(GUID))},
-                        "nested_path": ROOT_PATH,
-                    }
-                ]
+            return BQLScript(
+                data_type=STRING,
+                expr=quote_column(escape_name(GUID)),
+                frum=self,
+                miss=FALSE,
+                many=False,
+                schema=schema
             )
         cols = schema.leaves(var_name)
         if not cols:
             # DOES NOT EXIST
-            return wrap(
-                [{"name": ".", "sql": {"0": SQL_NULL}, "nested_path": ROOT_PATH}]
+            return BQLScript(
+                data_type=OBJECT,
+                expr=SQL_NULL,
+                frum=self,
+                miss=TRUE,
+                many=False,
+                schema=schema
             )
-        acc = {}
-        if boolean:
-            for col in cols:
-                cname = relative_field(col.name, var_name)
-                nested_path = col.nested_path[0]
-                if col.type == OBJECT:
-                    value = SQL_TRUE
-                elif col.type == BOOLEAN:
-                    value = quote_column(col.es_column)
-                else:
-                    value = quote_column(col.es_column) + SQL_IS_NOT_NULL
-                tempa = acc.setdefault(nested_path, {})
-                tempb = tempa.setdefault(get_property_name(cname), {})
-                tempb["b"] = value
+        elif len(cols) == 1:
+            col = first(cols)
+            return BQLScript(
+                data_type=col.jx_type,
+                expr=quote_column(ApiName(*split_field(col.es_column))),
+                frum=self,
+                miss=MissingOp(self),
+                many=False,
+                schema=schema
+            )
         else:
+            coalesce = []
             for col in cols:
-                cname = relative_field(col.name, var_name)
-                if col.jx_type == OBJECT:
-                    prefix = self.var + "."
-                    for cn, cs in schema.items():
-                        if cn.startswith(prefix):
-                            for child_col in cs:
-                                tempa = acc.setdefault(child_col.nested_path[0], {})
-                                tempb = tempa.setdefault(get_property_name(cname), {})
-                                tempb[json_type_to_bq_type[col.type]] = quote_column(
-                                    child_col.es_column
-                                )
+                rel_path = untype_path(relative_field(col.name, var_name))
+                if rel_path == '.':
+                    coalesce.append(Variable(col.name))
                 else:
-                    nested_path = col.nested_path[0]
-                    tempa = acc.setdefault(nested_path, {})
-                    tempb = tempa.setdefault(get_property_name(cname), {})
-                    tempb[json_type_to_bq_type[col.jx_type]] = quote_column(
-                        col.es_column
-                    )
-
-        return wrap(
-            [
-                {"name": cname, "sql": types, "nested_path": nested_path}
-                for nested_path, pairs in acc.items()
-                for cname, types in pairs.items()
-            ]
-        )
+                    Log.error("structure not supported")
+            return CoalesceOp(coalesce).to_bq(schema)

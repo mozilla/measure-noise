@@ -13,13 +13,14 @@ import numpy as np
 
 import mo_math
 from jx_bigquery import bigquery
+from jx_bigquery.sql import quote_column
 from jx_python import jx
 from measure_noise import deviance, step_detector
 from measure_noise.extract_perf import get_all_signatures, get_signature, get_dataum
 from measure_noise.step_detector import find_segments, MAX_POINTS, MIN_POINTS
 from measure_noise.utils import assign_colors, histogram
 from mo_collections import left
-from mo_dots import Null, Data, coalesce, unwrap, listwrap
+from mo_dots import Data, coalesce, unwrap, to_data
 from mo_future import text
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
@@ -35,13 +36,13 @@ LOOK_BACK = 3 * MONTH
 
 
 def process(
-    signature_hash,
+    about_deviant,
     since,
     source,
-    destination,
+    deviant_summary,
     show=False,
     show_limit=MAX_POINTS,
-    show_old=True,
+    show_old=False,
     show_distribution=None
 ):
     """
@@ -53,6 +54,7 @@ def process(
     :param show_distribution:
     :return:
     """
+    signature_hash = about_deviant.id
     if not mo_math.is_hex(signature_hash):
         Log.error("expecting hexidecimal hash")
 
@@ -62,7 +64,7 @@ def process(
     # GET SIGNATURE DETAILS
     data = get_dataum(source, signature_hash, since)
 
-    min_date = (Date.today() - 3 * MONTH).unix
+    min_date = since.unix
     pushes = jx.sort(
         [
             {
@@ -86,6 +88,7 @@ def process(
                 sig.test,
                 sig.platform,
                 sig.repository,
+                about_deviant.overall_dev_status
             ],
         )
     )
@@ -121,11 +124,13 @@ def process(
         last_dev_status = None
         last_dev_score = None
         relative_noise = None
+        Log.note("not ")
     else:
         # NOISE OF LAST SEGMENT
         s, e = new_segments[-2], new_segments[-1]
         last_segment = np.array(values[s:e])
-        trimmed_segment = last_segment[np.argsort(last_segment)[IGNORE_TOP:-IGNORE_TOP]]
+        ignore = IGNORE_TOP
+        trimmed_segment = last_segment[np.argsort(last_segment)[ignore:-ignore]]
         last_mean = np.mean(trimmed_segment)
         last_std = np.std(trimmed_segment)
         last_dev_status, last_dev_score = deviance(trimmed_segment)
@@ -149,7 +154,7 @@ def process(
         )
 
         if show_distribution:
-            histogram(last_segment, title=last_dev_status+"="+text(last_dev_score))
+            histogram(trimmed_segment, title=last_dev_status+"="+text(last_dev_score))
 
     max_extra_diff = None
     max_missing_diff = None
@@ -173,21 +178,18 @@ def process(
             max_missing_diff=max_missing_diff,
         )
         Log.note("old={{old}}, new={{new}}", old=old_segments, new=new_segments)
-        if show and len(pushes):
-            show_old and assign_colors(values, old_segments, title="OLD " + title)
-            assign_colors(values, new_segments, title="NEW " + title)
     else:
         Log.note("Agree")
-        if show and len(pushes):
-            show_old and assign_colors(values, old_segments, title="OLD " + title)
-            assign_colors(values, new_segments, title="NEW " + title)
 
+    if show and len(pushes):
+        show_old and assign_colors(values, old_segments, title="OLD " + title)
+        assign_colors(values, new_segments, title="NEW " + title)
 
-    if isinstance(destination, bigquery.Table):
+    if isinstance(deviant_summary, bigquery.Table):
         Log.note("BigQuery summary not updated")
         return
 
-    destination.upsert(
+    deviant_summary.upsert(
         where={"eq": {"id": sig.id}},
         doc=Data(
             id=signature_hash,
@@ -223,12 +225,13 @@ def is_diff(A, B):
     return False
 
 
-def update_local_database(config, destination, candidates, since):
-    if isinstance(destination, bigquery.Table):
-        Log.error("Only the ETL should fill the bigquery table")
+def update_local_database(config, deviant_summary, candidates, since):
+    if isinstance(deviant_summary, bigquery.Table):
+        Log.note("Only the ETL process should fill the bigquery table")
+        return
 
     # GET EVERYTHING WE HAVE SO FAR
-    exists = destination.query(
+    exists = deviant_summary.query(
         {
             "select": ["signature_hash", "last_updated"],
             "where": {"and": [{"in": {"signature_hash": candidates.signature_hash}}, {"exists": "num_pushes"}]},
@@ -257,7 +260,7 @@ def update_local_database(config, destination, candidates, since):
                 signature_hash = limited_update.pop_one()
                 if not signature_hash:
                     return
-                process(signature_hash, since, source=config.database, destination=destination)
+                process(signature_hash, since, source=config.database, deviant_summary=deviant_summary)
 
         threads = [Thread.run(text(i), loop) for i in range(3)]
         for t in threads:
@@ -266,28 +269,25 @@ def update_local_database(config, destination, candidates, since):
     Log.note("Local database is up to date")
 
 
-def show_sorted(since, source, destination, sort, limit, where=True, show_distribution=None, show_old=True):
+def show_sorted(since, source, deviant_summary, sort, limit, where=True, show_distribution=None, show_old=False):
     if not limit:
         return
-    tops = destination.query(
+
+    tops = list(deviant_summary.jx_query(
         {
-            "select": "id",
-            "where": {
-                "and": [{"gte": {"num_pushes": 1}}]
-                + listwrap(where)
-            },
+            "where": where,
             "sort": sort,
             "limit": limit,
             "format": "list",
         }
-    ).data
+    ).data)
 
-    for signature_hash in tops:
+    for doc in tops:
         process(
-            signature_hash=signature_hash,
+            about_deviant=to_data(doc),
             since=since,
             source=source,
-            destination=destination,
+            deviant_summary=deviant_summary,
             show=True,
             show_distribution=show_distribution,
             show_old=show_old
@@ -298,28 +298,26 @@ def main():
     since = Date.today()-LOOK_BACK
 
     # SETUP DESTINATION
-    summary_table = bigquery.Dataset(config.destination).get_or_create_table(config.destination)
-    # ENSURE SHARDS ARE MERGED
-    summary_table.merge_shards()
+    deviant_summary = bigquery.Dataset(config.deviant_summary).get_or_create_table(read_only=True, kwargs=config.deviant_summary)
 
     if config.args.id:
         # EXIT EARLY AFTER WE GOT THE SPECIFIC IDS
         if len(config.args.id) < 4:
             step_detector.SHOW_CHARTS = True
         for signature_hash in config.args.id:
-            process(signature_hash, since=since, source=config.database, destination=summary_table, show=True)
+            process(signature_hash, since=since, source=config.database, deviant_summary=deviant_summary, show=True)
         return
 
     if not config.args.now:
         candidates = get_all_signatures(config.database, config.analysis.signatures_sql)
-        update_local_database(config=config, destination=summary_table, candidates=candidates, since=since)
+        update_local_database(config=config, deviant_summary=deviant_summary, candidates=candidates, since=since)
 
     # DEVIANT
     show_sorted(
         since=since,
         source=config.database,
-        destination=summary_table,
-        sort={"value": {"abs": "dev_score"}, "sort": "desc"},
+        deviant_summary=deviant_summary,
+        sort={"value": {"abs": "overall_dev_score"}, "sort": "desc"},
         limit=config.args.deviant,
         show_old=False,
         show_distribution=True,
@@ -329,10 +327,10 @@ def main():
     show_sorted(
         since=since,
         source=config.database,
-        destination=summary_table,
-        sort="dev_score",
+        deviant_summary=deviant_summary,
+        sort="overall_dev_score",
         limit=config.args.modal,
-        where={"eq": {"dev_status": "MODAL"}},
+        where={"eq": {"overall_dev_status": "MODAL"}},
         show_distribution=True,
     )
 
@@ -340,10 +338,10 @@ def main():
     show_sorted(
         since=since,
         source=config.database,
-        destination=summary_table,
-        sort={"value": "dev_score", "sort": "desc"},
+        deviant_summary=deviant_summary,
+        sort={"value": "overall_dev_score", "sort": "desc"},
         limit=config.args.outliers,
-        where={"eq": {"dev_status": "OUTLIERS"}},
+        where={"eq": {"overall_dev_status": "OUTLIERS"}},
         show_distribution=True,
     )
 
@@ -351,10 +349,10 @@ def main():
     show_sorted(
         since=since,
         source=config.database,
-        destination=summary_table,
-        sort={"value": {"abs": "dev_score"}, "sort": "desc"},
+        deviant_summary=deviant_summary,
+        sort={"value": {"abs": "overall_dev_score"}, "sort": "desc"},
         limit=config.args.skewed,
-        where={"eq": {"dev_status": "SKEWED"}},
+        where={"eq": {"overall_dev_status": "SKEWED"}},
         show_distribution=True,
     )
 
@@ -362,10 +360,10 @@ def main():
     show_sorted(
         since=since,
         source=config.database,
-        destination=summary_table,
-        sort={"value": {"abs": "dev_score"}, "sort": "desc"},
+        deviant_summary=deviant_summary,
+        sort={"value": {"abs": "overall_dev_score"}, "sort": "desc"},
         limit=config.args.ok,
-        where={"eq": {"dev_status": "OK"}},
+        where={"eq": {"overall_dev_status": "OK"}},
         show_distribution=True,
     )
 
@@ -373,7 +371,7 @@ def main():
     show_sorted(
         since=since,
         source=config.database,
-        destination=summary_table,
+        deviant_summary=deviant_summary,
         sort={"value": {"abs": "relative_noise"}, "sort": "desc"},
         limit=config.args.noise,
     )
@@ -382,7 +380,7 @@ def main():
     show_sorted(
         since=since,
         source=config.database,
-        destination=summary_table,
+        deviant_summary=deviant_summary,
         sort={"value": {"abs": "max_extra_diff"}, "sort": "desc"},
         where={"lte": {"num_new_segments": 7}},
         limit=config.args.extra,
@@ -392,7 +390,7 @@ def main():
     show_sorted(
         since=since,
         source=config.database,
-        destination=summary_table,
+        deviant_summary=deviant_summary,
         sort={"value": {"abs": "max_missing_diff"}, "sort": "desc"},
         where={"lte": {"num_old_segments": 6}},
         limit=config.args.missing,
@@ -402,8 +400,8 @@ def main():
     show_sorted(
         since=since,
         source=config.database,
-        destination=summary_table,
-        sort={"value": "num_new_segments", "sort": "desc"},
+        deviant_summary=deviant_summary,
+        sort={"value": "num_segments", "sort": "desc"},
         limit=config.args.pathological,
     )
 

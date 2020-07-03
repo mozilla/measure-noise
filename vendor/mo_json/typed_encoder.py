@@ -19,7 +19,7 @@ from mo_dots import CLASS, Data, DataObject, FlatList, NullType, SLOT, _get, is_
 from mo_dots.objects import OBJ
 from mo_future import binary_type, generator_types, integer_types, is_binary, is_text, sort_using_key, text
 from mo_json import BOOLEAN, ESCAPE_DCT, EXISTS, INTEGER, NESTED, NUMBER, STRING, float2json, python_type_to_json_type, \
-    NUMBER_TYPES
+    same_json_type
 from mo_json.encoder import COLON, COMMA, UnicodeBuilder, json_encoder, problem_serializing
 from mo_logs import Log
 from mo_logs.strings import quote
@@ -157,10 +157,8 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
             value_json_type = python_type_to_json_type[value.__class__]
             column_json_type = es_type_to_json_type[sub_schema.es_type]
 
-            if value_json_type == column_json_type:
+            if same_json_type(value_json_type, column_json_type):
                 pass  # ok
-            elif  value_json_type in NUMBER_TYPES and column_json_type in NUMBER_TYPES:
-                pass # ok
             elif value_json_type == NESTED and all(python_type_to_json_type[v.__class__] == column_json_type for v in value if v != None):
                 pass  # empty arrays can be anything
             else:

@@ -11,12 +11,12 @@ from __future__ import absolute_import, division, unicode_literals
 import string
 from collections import Mapping
 
+from jx_base.query import _normalize_sort, _normalize_select
 from jx_python import jx
-from mo_dots import listwrap, wrap
+from mo_dots import wrap, split_field
 from mo_files.url import hex2chr
 from mo_future import text, first, is_text
 from mo_logs import Log
-from mo_times import Date, Duration
 from mo_sql import (
     SQL,
     SQL_FALSE,
@@ -34,11 +34,12 @@ from mo_sql import (
     SQL_FROM,
     SQL_WHERE,
     SQL_ORDERBY,
-    SQL_STAR,
     SQL_LT,
     SQL_AS,
-)
-from mo_times.dates import parse
+    SQL_ASC,
+    SQL_DESC,
+    SQL_LIMIT)
+from mo_times import Date, Duration
 
 TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 ALLOWED = string.ascii_letters + string.digits
@@ -131,7 +132,7 @@ def unescape_name(esc_name):
 
 
 def sql_time(time):
-    return sql_call("TIMESTAMP_MICROS", quote_value(int(Date(time).unix*1000000)))
+    return sql_call("TIMESTAMP_MICROS", quote_value(int(Date(time).unix * 1000000)))
 
 
 def sql_alias(value, alias):
@@ -195,25 +196,52 @@ def sql_lt(**item):
     return ConcatSQL(quote_column(k), SQL_LT, quote_value(v))
 
 
-def sql_query(command):
+def sql_query(query, schema):
     """
     VERY BASIC QUERY EXPRESSION TO SQL
-    :param command: jx-expression
+    :param query: jx-expression
     :return: SQL
     """
-    command = wrap(command)
+    from jx_base import jx_expression
+    from jx_bigquery.expressions._utils import BQLang
+
+    query = wrap(query)
+
     acc = [SQL_SELECT]
-    if command.select:
-        acc.append(JoinSQL(SQL_COMMA, map(quote_column, listwrap(command.select))))
-    else:
-        acc.append(SQL_STAR)
+
+    select = _normalize_select(query.select, query['from'], schema)
+    acc.append(
+        JoinSQL(
+            SQL_COMMA,
+            [
+                sql_alias(BQLang[jx_expression(s.value)].to_bq(schema), escape_name(s.name))
+                for s in select
+            ],
+        )
+    )
 
     acc.append(SQL_FROM)
-    acc.append(quote_column(command["from"]))
-    if command.where.eq:
+    acc.append(quote_column(ApiName(*split_field(query["from"]))))
+    if query.where:
         acc.append(SQL_WHERE)
-        acc.append(sql_eq(**command.where.eq))
-    if command.orderby:
+        acc.append(BQLang[jx_expression(query.where)].to_bq(schema))
+    if query.sort:
+        sort = _normalize_sort(query.sort)
         acc.append(SQL_ORDERBY)
-        acc.append(JoinSQL(SQL_COMMA, map(quote_column, listwrap(command.orderby))))
+        acc.append(
+            JoinSQL(
+                SQL_COMMA,
+                [
+                    ConcatSQL(
+                        BQLang[jx_expression(s.value)].to_bq(schema),
+                        SQL_DESC if s.sort == -1 else SQL_ASC,
+                    )
+                    for s in sort
+                ],
+            )
+        )
+    if query.limit:
+        acc.append(SQL_LIMIT)
+        acc.append(BQLang[jx_expression(query.limit)].to_bq(schema))
+
     return ConcatSQL(*acc)

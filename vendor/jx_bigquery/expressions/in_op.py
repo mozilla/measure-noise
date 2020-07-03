@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_bigquery.sql import quote_list
 
 from jx_base.expressions import InOp as InOp_
 from jx_base.language import is_op
@@ -24,6 +23,8 @@ from mo_sql import SQL_FALSE, SQL_OR, sql_iso, ConcatSQL, SQL_IN
 class InOp(InOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
+        from jx_bigquery.sql import quote_list
+
         if not is_op(self.superset, Literal):
             Log.error("Not supported")
         j_value = json2value(self.superset.json)

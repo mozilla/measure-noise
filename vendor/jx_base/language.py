@@ -89,7 +89,7 @@ class Language(object):
             )
             self.ops = [None] * num_ops
 
-        for _, new_op in module_vars.items():
+        for _, new_op in list(module_vars.items()):
             if isinstance(new_op, type) and hasattr(new_op, ID):
                 # EXPECT OPERATORS TO HAVE id
                 # EXPECT NEW DEFINED OPS IN THIS MODULE TO HAVE lang NOT SET

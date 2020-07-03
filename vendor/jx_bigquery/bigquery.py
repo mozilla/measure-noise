@@ -14,9 +14,30 @@ from copy import copy
 
 from google.cloud import bigquery
 from google.oauth2 import service_account
-from jx_base import Container, Facts
+
+from jx_base import Container as BaseContainer, Facts as BaseFacts
+from jx_bigquery import snowflakes
+from jx_bigquery.snowflakes import Snowflake
+from jx_bigquery.sql import (
+    quote_column,
+    ALLOWED,
+    sql_call,
+    sql_alias,
+    escape_name,
+    ApiName,
+    sql_query,
+)
+from jx_bigquery.typed_encoder import (
+    NESTED_TYPE,
+    typed_encode,
+    REPEATED,
+    json_type_to_bq_type,
+    INTEGER_TYPE,
+    untyped,
+)
 from jx_python import jx
-from mo_dots import listwrap, unwrap, join_field, Null, is_data, Data, wrap, set_default
+from mo_dots import listwrap, unwrap, join_field, Null, is_data, Data, wrap, set_default, dict_to_data, leaves_to_data, \
+    from_data
 from mo_future import is_text, text, first
 from mo_json import INTEGER
 from mo_kwargs import override
@@ -41,26 +62,6 @@ from mo_sql import (
 from mo_threads import Till, Lock, Queue
 from mo_times import MINUTE, Timer
 from mo_times.dates import Date
-
-from jx_bigquery import snowflakes
-from jx_bigquery.snowflakes import Snowflake
-from jx_bigquery.sql import (
-    quote_column,
-    ALLOWED,
-    sql_call,
-    sql_alias,
-    escape_name,
-    ApiName,
-    sql_query,
-)
-from jx_bigquery.typed_encoder import (
-    NESTED_TYPE,
-    typed_encode,
-    REPEATED,
-    json_type_to_bq_type,
-    INTEGER_TYPE,
-    untyped,
-)
 
 DEBUG = False
 EXTEND_LIMIT = 2 * MINUTE  # EMIT ERROR IF ADDING RECORDS TO TABLE TOO OFTEN
@@ -91,7 +92,7 @@ def find_dataset(dataset, client):
             return _dataset.reference
 
 
-class Dataset(Container):
+class Dataset(BaseContainer):
     """
     REPRESENT A BIGQUERY DATASET; aka A CONTAINER FOR TABLES; aka A DATABASE
     """
@@ -264,7 +265,7 @@ class Dataset(Container):
         return job
 
 
-class Table(Facts):
+class Table(BaseFacts):
     @override
     def __init__(
         self,
@@ -356,7 +357,20 @@ class Table(Facts):
         """
         return self.query(sql_query({"from": self.full_name}))
 
-    def query(self, sql):
+    def jx_query(self, jx_query):
+        docs = self.sql_query(sql_query(dict_to_data({"from": join_field(self.full_name.values)}) | jx_query, self.schema))
+        data = []
+        for d in docs:
+            u = untyped(from_data(leaves_to_data(d)))
+            data.append(u)
+
+        return Data(data=data, format='list')
+
+    @property
+    def schema(self):
+        return self._flake
+
+    def sql_query(self, sql):
         """
         :param sql: SQL QUERY
         :return: GENERATOR OF DOCUMENTS as dict

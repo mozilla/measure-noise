@@ -41,7 +41,7 @@ def process(
     signature_hash,
     since,
     source,
-    destination,
+    deviant_summary,
     show=False,
     show_limit=MAX_POINTS,
     show_old=True,
@@ -134,7 +134,7 @@ def process(
             num_segments=len(new_segments)-1
         )
 
-    destination.add(
+    deviant_summary.add(
         Data(
             id=signature_hash,
             title=title,
@@ -159,9 +159,9 @@ def main(config):
     since = Date.today()-LOOK_BACK
 
     # SETUP DESTINATION
-    destination = bigquery.Dataset(config.destination).get_or_create_table(config.destination)
+    deviant_summary = bigquery.Dataset(config.deviant_summary).get_or_create_table(config.deviant_summary)
     # ENSURE SHARDS ARE MERGED
-    destination.merge_shards()
+    deviant_summary.merge_shards()
 
     # GET ALL KNOWN SERIES
     with MySQL(config.source) as t:
@@ -186,12 +186,12 @@ def main(config):
     # PULL PREVIOUS SERIES
     previous = dict_to_data({
         doc['id']: doc
-        for doc in destination.query(SQL(f"""
+        for doc in deviant_summary.query(SQL(f"""
             SELECT
                 id,
                 MAX(last_updated) as last_processed
             FROM
-                {quote_column(destination.full_name)}
+                {quote_column(deviant_summary.full_name)}
             WHERE
                 last_updated > {sql_time(since)} AND
                 num__pushes.__i__ > 0
@@ -220,14 +220,14 @@ def main(config):
                 if not sig_id:
                     return
                 try:
-                    process(sig_id, since, config.source, destination)
+                    process(sig_id, since, config.source, deviant_summary)
                 except Exception as cause:
                     Log.warning("Could not process {{sig}}", sig=sig_id, cause=cause)
         threads = [Thread.run(text(i), loop, please_stop=outatime) for i in range(NUM_THREADS)]
         for t in threads:
             t.join()
 
-        destination.merge_shards()
+        deviant_summary.merge_shards()
 
 
 if __name__ == "__main__":

@@ -571,7 +571,7 @@ def _leaves_to_data(value):
     return value
 
 
-def unwrap(v):
+def from_data(v):
     if v is None:
         return None
     _type = _get(v, CLASS)
@@ -592,6 +592,9 @@ def unwrap(v):
         return (unwrap(vv) for vv in v)
     else:
         return v
+
+
+unwrap = from_data
 
 
 def listwrap(value):
