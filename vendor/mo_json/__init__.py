@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import math
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from hjson import loads as hjson2value
@@ -362,7 +362,7 @@ def datetime2unix(d):
         if d == None:
             return None
         elif isinstance(d, datetime):
-            epoch = datetime(1970, 1, 1)
+            epoch = datetime(1970, 1, 1, 0, 0, 0, 0, timezone.utc)
         elif isinstance(d, date):
             epoch = date(1970, 1, 1)
         else:

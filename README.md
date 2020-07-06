@@ -92,7 +92,7 @@ Ensure you are in the main project directory, and point to your config file
 Some other options are 
 
 * `--id` - show specific signature_ids
-* `--now` - Do not update local database, just show worst series right now
+* `--download=<filename>` - Download all deviant statistics to file
 * `--deviant=<int>` - Show number of series with most deviant noise 
 * `--outliers=<int>` - Show number of series with most outliers noise 
 * `--modal=<int>` - Show number of series that seem bi-modal 

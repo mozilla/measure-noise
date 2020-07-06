@@ -1,4 +1,5 @@
 from jx_bigquery.expressions._utils import BQLang
+from jx_bigquery.expressions.abs_op import AbsOp
 from jx_bigquery.expressions.add_op import AddOp
 from jx_bigquery.expressions.and_op import AndOp
 from jx_bigquery.expressions.basic_add_op import BasicAddOp

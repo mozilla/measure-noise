@@ -9,34 +9,22 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import AndOp as AndOp_
-from jx_bigquery.expressions._utils import BQLang, check
-from mo_dots import wrap
-from mo_sql import SQL_AND, SQL_FALSE, SQL_TRUE, sql_iso
+from jx_base.expressions import AndOp as AndOp_, TRUE, FALSE
+from jx_bigquery.expressions._utils import check, BQLScript
+from mo_json import BOOLEAN
+from mo_sql import SQL_AND, JoinSQL
 
 
 class AndOp(AndOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
         if not self.terms:
-            return wrap([{"name": ".", "sql": {"b": SQL_TRUE}}])
-        elif all(self.terms):
-            return wrap(
-                [
-                    {
-                        "name": ".",
-                        "sql": {
-                            "b": SQL_AND.join(
-                                [
-                                    sql_iso(
-                                        BQLang[t].to_bq(schema, boolean=True)[0].sql.b
-                                    )
-                                    for t in self.terms
-                                ]
-                            )
-                        },
-                    }
-                ]
-            )
-        else:
-            return wrap([{"name": ".", "sql": {"b": SQL_FALSE}}])
+            return TRUE.to_bq(schema)
+
+        return BQLScript(
+            expr=JoinSQL(SQL_AND, [self.lang[t].to_bq(schema)for t in self.terms]),
+            data_type=BOOLEAN,
+            frum=self,
+            miss=FALSE,
+            schema=schema,
+        )

@@ -13,26 +13,29 @@ import numpy as np
 
 import mo_math
 from jx_bigquery import bigquery
-from jx_bigquery.sql import quote_column
+from jx_bigquery.sql import quote_column, quote_value
 from jx_python import jx
 from measure_noise import deviance, step_detector
-from measure_noise.extract_perf import get_all_signatures, get_signature, get_dataum
+from measure_noise.extract_perf import get_signature, get_dataum
 from measure_noise.step_detector import find_segments, MAX_POINTS, MIN_POINTS
 from measure_noise.utils import assign_colors, histogram
 from mo_collections import left
 from mo_dots import Data, coalesce, unwrap, to_data
+from mo_files import File
 from mo_future import text
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
 from mo_threads import Queue, Thread
 from mo_times import MONTH, Date, Timer
 from mo_times.dates import parse
+from pyLibrary.convert import list2tab
 
 IGNORE_TOP = 3  # WHEN CALCULATING NOISE OR DEVIANCE, IGNORE SOME EXTREME VALUES
 LOCAL_RETENTION = "3day"  # HOW LONG BEFORE WE REFRESH LOCAL DATABASE ENTRIES
 # WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
 TOLERANCE = MIN_POINTS
 LOOK_BACK = 3 * MONTH
+DOWNLOAD_LIMIT = 100_000
 
 
 def process(
@@ -308,9 +311,25 @@ def main():
             process(signature_hash, since=since, source=config.database, deviant_summary=deviant_summary, show=True)
         return
 
-    if not config.args.now:
-        candidates = get_all_signatures(config.database, config.analysis.signatures_sql)
-        update_local_database(config=config, deviant_summary=deviant_summary, candidates=candidates, since=since)
+    # DOWNLOAD
+    if config.args.download:
+        # GET ALL KNOWN SERIES
+        docs = list(deviant_summary.sql_query(f"""
+            SELECT * EXCEPT (_rank, values) 
+            FROM (
+              SELECT 
+                *, 
+                row_number() over (partition by id order by last_updated desc) as _rank 
+              FROM  
+                {quote_column(deviant_summary.full_name)}
+              ) a 
+            WHERE _rank=1
+            LIMIT {quote_value(DOWNLOAD_LIMIT)}
+        """))
+        if len(docs) == DOWNLOAD_LIMIT:
+            Log.warning("Not all signatures downloaded")
+        File(config.args.download).write(list2tab(docs, separator=","))
+
 
     # DEVIANT
     show_sorted(
@@ -417,10 +436,13 @@ if __name__ == "__main__":
                 "help": "show specific signatures",
             },
             {
-                "name": "--now",
-                "dest": "now",
-                "help": "do not update signatures, go direct to showing problems with what is known locally",
-                "action": "store_true",
+                "name": "--download",
+                "dest": "download",
+                "help": "download deviance to CSV local file",
+                "nargs": "?",
+                "const": "deviant_stats.csv",
+                "type": str,
+                "action": "store",
             },
             {
                 "name": ["--dev", "--deviant", "--deviance"],
