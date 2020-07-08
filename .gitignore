@@ -5,3 +5,4 @@ __pycache__
 /*.sqlite
 /.pem
 /deviant_stats.csv
+/.venv

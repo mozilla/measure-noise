@@ -37,6 +37,8 @@ For Linux/OSX
 
     git clone https://github.com/mozilla/measure-noise.git
     cd measure-noise
+    python -m venv .venv      
+    source .venv/bin/activate
     pip install -r requirements.txt
     pip install -r tests/requirements.txt
     export PYTHONPATH=.:vendor
@@ -46,6 +48,9 @@ Similar for Windows:
 
     git clone https://github.com/mozilla/measure-noise.git
     cd measure-noise
+    python -m pip install virtualenv  # venv is buggy on Windows
+    python -m virtualenv .venv 
+    .venv\Scripts\activate
     pip install -r requirements.txt
     pip install -r tests\requirements.txt
     set PYTHONPATH=.;vendor
