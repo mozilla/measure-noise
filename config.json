@@ -3,7 +3,7 @@
         "schema": "treeherder",
         "username": "activedata2",
         "ssl": {
-            "ca": "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
+            "pem": "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
         },
         "$ref": "~/private.json#treeherder",
         "debug": false,
