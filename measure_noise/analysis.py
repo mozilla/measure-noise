@@ -67,10 +67,10 @@ def process(
         Log.error("expecting hexidecimal hash")
 
     # GET SIGNATURE DETAILS
-    sig = get_signature(db_config=source, signature_hash=signature_hash)
+    sig = get_signature(db_config=source, signature_hash=signature_hash, repository=about_deviant.repository)
 
     # GET SIGNATURE DETAILS
-    data = get_dataum(source, signature_hash, since)
+    data = get_dataum(source, sig.id, since=since)
 
     min_date = since.unix
     pushes = jx.sort(
