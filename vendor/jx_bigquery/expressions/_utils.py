@@ -23,7 +23,7 @@ from mo_dots import wrap, FlatList, is_data
 from mo_future import decorate
 from mo_json import BOOLEAN, NESTED, OBJECT, STRING, NUMBER, IS_NULL
 from mo_logs import Log
-from mo_sql import (
+from jx_bigquery.sql import (
     SQL,
     SQL_FALSE,
     SQL_NULL,

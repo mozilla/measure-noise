@@ -19,10 +19,8 @@ from mo_future import text, first, is_text
 from mo_logs import Log
 from mo_sql import (
     SQL,
-    SQL_FALSE,
     SQL_NULL,
     SQL_SELECT,
-    SQL_TRUE,
     sql_iso,
     sql_list,
     SQL_AND,
@@ -38,9 +36,18 @@ from mo_sql import (
     SQL_AS,
     SQL_ASC,
     SQL_DESC,
-    SQL_LIMIT)
+    SQL_LIMIT,
+    SQL_ZERO,
+    SQL_ONE,
+    SQL_PLUS,
+    SQL_STAR,
+)
 from mo_times import Date, Duration
 
+_keep_import = (SQL_ZERO, SQL_ONE, SQL_PLUS, SQL_STAR)
+
+SQL_TRUE = SQL(" TRUE ")
+SQL_FALSE = SQL(" FALSE ")
 TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 ALLOWED = string.ascii_letters + string.digits
 GUID = "_id"  # user accessible, unique value across many machines
@@ -209,12 +216,14 @@ def sql_query(query, schema):
 
     acc = [SQL_SELECT]
 
-    select = _normalize_select(query.select, query['from'], schema)
+    select = _normalize_select(query.select, query["from"], schema)
     acc.append(
         JoinSQL(
             SQL_COMMA,
             [
-                sql_alias(BQLang[jx_expression(s.value)].to_bq(schema), escape_name(s.name))
+                sql_alias(
+                    BQLang[jx_expression(s.value)].to_bq(schema), escape_name(s.name)
+                )
                 for s in select
             ],
         )
