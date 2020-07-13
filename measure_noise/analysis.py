@@ -104,7 +104,7 @@ def process(
     url = "https://treeherder.mozilla.org/perf.html#/graphs?" + value2url_param({
         "highlightAlerts": 1,
         "series": [sig.repository, sig.id, 1, coalesce(sig.framework_id, sig.framework)],
-        "timerange": 31536000,
+        "timerange": 7776000,  # 3 months
     })
 
     Log.note("With {{title}}: {{url}}", title=title, url=url)
