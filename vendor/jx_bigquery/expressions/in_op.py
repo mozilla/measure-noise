@@ -9,31 +9,32 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-
-from jx_base.expressions import InOp as InOp_
+from jx_base.expressions import InOp as InOp_, FALSE
 from jx_base.language import is_op
-from jx_bigquery.expressions._utils import BQLang, check
+from jx_bigquery.expressions._utils import BQLang, check, BQLScript
 from jx_bigquery.expressions.literal import Literal
-from mo_dots import wrap
-from mo_json import json2value
+from jx_bigquery.sql import quote_list
+from mo_json import BOOLEAN
 from mo_logs import Log
-from mo_sql import SQL_FALSE, SQL_OR, sql_iso, ConcatSQL, SQL_IN
+from mo_sql import SQL_FALSE, ConcatSQL, SQL_IN
 
 
 class InOp(InOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
-        from jx_bigquery.sql import quote_list
-
         if not is_op(self.superset, Literal):
             Log.error("Not supported")
-        j_value = json2value(self.superset.json)
-        if j_value:
+        values = self.superset.value
+        if values:
             var = BQLang[self.value].to_bq(schema)
-            sql = SQL_OR.join(
-                sql_iso(ConcatSQL(v, SQL_IN, quote_list(j_value)))
-                for t, v in var[0].sql.items()
-            )
+            sql = ConcatSQL(var, SQL_IN, quote_list(values))
         else:
             sql = SQL_FALSE
-        return wrap([{"name": ".", "sql": {"b": sql}}])
+
+        return BQLScript(
+            expr=sql,
+            data_type=BOOLEAN,
+            frum=self,
+            miss=FALSE,
+            schema=schema,
+        )

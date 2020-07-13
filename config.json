@@ -39,24 +39,10 @@
     },
     "analysis": {
         "download_limit": 10,
-        "local_db": {
-            "filename": "deviant_summary.sqlite",
-            "debug": false,
-            "upgrade": false,
-        },
-        "signatures_sql": {
-            "$concat": [
-                "SELECT s.signature_hash",
-                "FROM performance_signature s",
-                "WHERE",
-                "s.framework_id = 10 AND",
-                "(s.should_alert is NULL or s.should_alert <> 0) AND",
-                "(s.test IS NULL or s.test='' or s.test=s.suite) AND",
-                "s.repository_id = 77  -- autoland",
-                "GROUP BY s.id",
-            ],
-            "separator": "\n",
-        },
+        "interesting": {"and": [
+            {"in": {"repository":["mozilla-central", "autoland"]}},
+            {"not": {"in": {"framework": ["build_metrics", "vcs"]}}}
+        ]}
     },
     "constants": {
         "mo_http.http.default_headers": {

@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import numpy as np
 
 import mo_math
+from jx_base.expressions import TRUE
 from jx_bigquery import bigquery
 from jx_bigquery.sql import quote_column, quote_value
 from jx_python import jx
@@ -272,13 +273,13 @@ def update_local_database(config, deviant_summary, candidates, since):
     Log.note("Local database is up to date")
 
 
-def show_sorted(since, source, deviant_summary, sort, limit, where=True, show_distribution=None, show_old=False):
+def show_sorted(config, since, source, deviant_summary, sort, limit, where=TRUE, show_distribution=None, show_old=False):
     if not limit:
         return
 
     tops = list(deviant_summary.jx_query(
         {
-            "where": where,
+            "where": {"and": [where, config.analysis.interesting]},
             "sort": sort,
             "limit": limit,
             "format": "list",
@@ -333,6 +334,7 @@ def main():
 
     # DEVIANT
     show_sorted(
+        config=config,
         since=since,
         source=config.database,
         deviant_summary=deviant_summary,
@@ -344,6 +346,7 @@ def main():
 
     # MODAL
     show_sorted(
+        config=config,
         since=since,
         source=config.database,
         deviant_summary=deviant_summary,
@@ -355,6 +358,7 @@ def main():
 
     # OUTLIERS
     show_sorted(
+        config=config,
         since=since,
         source=config.database,
         deviant_summary=deviant_summary,
@@ -366,6 +370,7 @@ def main():
 
     # SKEWED
     show_sorted(
+        config=config,
         since=since,
         source=config.database,
         deviant_summary=deviant_summary,
@@ -377,6 +382,7 @@ def main():
 
     # OK
     show_sorted(
+        config=config,
         since=since,
         source=config.database,
         deviant_summary=deviant_summary,
@@ -388,6 +394,7 @@ def main():
 
     # NOISE
     show_sorted(
+        config=config,
         since=since,
         source=config.database,
         deviant_summary=deviant_summary,
@@ -397,6 +404,7 @@ def main():
 
     # EXTRA
     show_sorted(
+        config=config,
         since=since,
         source=config.database,
         deviant_summary=deviant_summary,
@@ -407,6 +415,7 @@ def main():
 
     # MISSING
     show_sorted(
+        config=config,
         since=since,
         source=config.database,
         deviant_summary=deviant_summary,
@@ -417,6 +426,7 @@ def main():
 
     # PATHOLOGICAL
     show_sorted(
+        config=config,
         since=since,
         source=config.database,
         deviant_summary=deviant_summary,

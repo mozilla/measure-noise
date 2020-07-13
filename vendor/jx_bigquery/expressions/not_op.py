@@ -9,28 +9,20 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import NotOp as NotOp_
-from jx_base.language import is_op
-from jx_bigquery.expressions._utils import check
-from jx_bigquery.expressions.boolean_op import BooleanOp
-from mo_dots import wrap
-from mo_sql import sql_iso
+from jx_base.expressions import NotOp as NotOp_, FALSE
+from jx_bigquery.expressions._utils import check, BQLScript
+from mo_json import BOOLEAN
+from mo_sql import sql_iso, SQL_NOT, ConcatSQL
 
 
 class NotOp(NotOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
-        not_expr = NotOp(BooleanOp(self.term)).partial_eval()
-        if is_op(not_expr, NotOp):
-            return wrap(
-                [
-                    {
-                        "name": ".",
-                        "sql": {
-                            "b": "NOT " + sql_iso(not_expr.term.to_bq(schema)[0].sql.b)
-                        },
-                    }
-                ]
-            )
-        else:
-            return not_expr.to_bq(schema)
+        not_expr = self.lang[self.term].to_bq(schema)
+        return BQLScript(
+            expr=ConcatSQL(SQL_NOT, sql_iso(not_expr)),
+            data_type=BOOLEAN,
+            frum=self,
+            miss=FALSE,
+            schema=schema,
+        )
