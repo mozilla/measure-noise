@@ -55,6 +55,7 @@ signature_sql = """
         t1.test_public_name ,
         t1.tags,
         t3.option_collection_hash as `option_collection.hash`,
+        t1.framework_id,
         t4.name AS framework, 
         t5.platform AS platform, 
         t6.name AS `repository`

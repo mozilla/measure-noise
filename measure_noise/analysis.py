@@ -103,7 +103,7 @@ def process(
     # EG https://treeherder.mozilla.org/perf.html#/graphs?highlightAlerts=1&series=mozilla-central,fee739b45f7960e4a520d8e0bd781dd9d0a3bec4,1,10&timerange=31536000
     url = "https://treeherder.mozilla.org/perf.html#/graphs?" + value2url_param({
         "highlightAlerts": 1,
-        "series": [sig.repository, sig.id, 1, coalesce(sig.framework, sig.framework_id)],
+        "series": [sig.repository, sig.id, 1, coalesce(sig.framework_id, sig.framework)],
         "timerange": 31536000,
     })
 
