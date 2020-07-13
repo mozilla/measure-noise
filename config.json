@@ -41,7 +41,8 @@
         "download_limit": 10,
         "interesting": {"and": [
             {"in": {"repository":["mozilla-central", "autoland"]}},
-            {"not": {"in": {"framework": ["build_metrics", "vcs"]}}}
+            {"not": {"in": {"framework": ["build_metrics", "vcs"]}}},
+            {"not": {"prefix": {"application": "chrome"}}}
         ]}
     },
     "constants": {

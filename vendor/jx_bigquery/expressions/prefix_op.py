@@ -9,31 +9,32 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import PrefixOp as PrefixOp_
-from jx_bigquery.expressions._utils import check
-from mo_dots import wrap
-from mo_sql import SQL_TRUE, sql_iso
+from jx_base.expressions import PrefixOp as PrefixOp_, FALSE
+from jx_bigquery.expressions._utils import check, BQLang
+from jx_bigquery.expressions.bql_script import BQLScript
+from jx_bigquery.sql import sql_call
+from mo_json import BOOLEAN
+from mo_sql import SQL_TRUE, ConcatSQL, SQL_ONE, SQL_EQ
 
 
 class PrefixOp(PrefixOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
         if not self.expr:
-            return wrap([{"name": ".", "sql": {"b": SQL_TRUE}}])
+            return BQLScript(
+                expr=SQL_TRUE,
+                data_type=BOOLEAN,
+                frum=self,
+                miss=FALSE,
+                schema=schema,
+            )
         else:
-            return wrap(
-                [
-                    {
-                        "name": ".",
-                        "sql": {
-                            "b": "INSTR"
-                            + sql_iso(
-                                self.expr.to_bq(schema)[0].sql.s
-                                + ", "
-                                + self.prefix.to_bq(schema)[0].sql.s
-                            )
-                            + "==1"
-                        },
-                    }
-                ]
+            expr = BQLang[self.expr].to_bq(schema)
+            prefix = BQLang[self.prefix].to_bq(schema)
+            return BQLScript(
+                expr=sql_call("STARTS_WITH", expr, prefix),
+                data_type=BOOLEAN,
+                frum=self,
+                miss=FALSE,
+                schema=schema,
             )
