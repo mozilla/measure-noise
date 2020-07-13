@@ -20,7 +20,7 @@ from mo_dots import relative_field, split_field
 from mo_future import first
 from mo_json import STRING, OBJECT
 from mo_logs import Log
-from mo_sql import SQL_NULL
+from jx_bigquery.sql import SQL_NULL
 
 
 class Variable(Variable_):

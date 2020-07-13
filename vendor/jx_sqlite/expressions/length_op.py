@@ -15,7 +15,7 @@ from jx_sqlite.sqlite import quote_value
 from mo_dots import Null, wrap
 from mo_future import text
 from mo_json import value2json
-from mo_sql import SQL, sql_iso, ConcatSQL
+from jx_sqlite.sqlite import SQL, sql_iso, ConcatSQL
 
 
 class LengthOp(LengthOp_):

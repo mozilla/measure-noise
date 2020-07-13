@@ -13,7 +13,7 @@ from jx_base.expressions import ExistsOp as ExistsOp_, FALSE
 from jx_bigquery.expressions._utils import check, BQLang
 from jx_bigquery.expressions.bql_script import BQLScript
 from mo_json import BOOLEAN
-from mo_sql import SQL_IS_NOT_NULL, ConcatSQL
+from jx_bigquery.sql import SQL_IS_NOT_NULL, ConcatSQL
 
 
 class ExistsOp(ExistsOp_):

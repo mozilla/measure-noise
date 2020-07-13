@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import MinOp as MinOp_
 from jx_bigquery.expressions._utils import BQLang, check
 from mo_dots import wrap
-from mo_sql import sql_iso, sql_list
+from jx_bigquery.sql import sql_iso, sql_list
 
 
 class MinOp(MinOp_):

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import AndOp as AndOp_
 from jx_sqlite.expressions._utils import SQLang, check
 from mo_dots import wrap
-from mo_sql import SQL_AND, SQL_FALSE, SQL_TRUE, sql_iso
+from jx_sqlite.sqlite import SQL_AND, SQL_FALSE, SQL_TRUE, sql_iso
 
 
 class AndOp(AndOp_):

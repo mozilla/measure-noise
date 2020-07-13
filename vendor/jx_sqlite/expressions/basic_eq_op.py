@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import BasicEqOp as BasicEqOp_
 from jx_sqlite.expressions._utils import check, SQLang
-from mo_sql import sql_iso, SQL_EQ
+from jx_sqlite.sqlite import sql_iso, SQL_EQ
 
 
 class BasicEqOp(BasicEqOp_):

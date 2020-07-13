@@ -14,7 +14,7 @@ from mo_dots import coalesce, wrap
 from mo_future import PY2, text
 from mo_json import _merge_order
 from mo_logs import Log
-from mo_sql import (
+from jx_bigquery.sql import (
     SQL,
     SQL_CASE,
     SQL_END,

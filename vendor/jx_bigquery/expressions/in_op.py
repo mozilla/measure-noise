@@ -16,7 +16,7 @@ from jx_bigquery.expressions.literal import Literal
 from jx_bigquery.sql import quote_list
 from mo_json import BOOLEAN
 from mo_logs import Log
-from mo_sql import SQL_FALSE, ConcatSQL, SQL_IN
+from jx_bigquery.sql import SQL_FALSE, ConcatSQL, SQL_IN
 
 
 class InOp(InOp_):

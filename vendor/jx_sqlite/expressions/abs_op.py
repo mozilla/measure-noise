@@ -14,7 +14,7 @@ from jx_sqlite.expressions._utils import SQLang, check
 from jx_sqlite.expressions.sql_script import SQLScript
 from jx_sqlite.sqlite import sql_call
 from mo_json import NUMBER, IS_NULL
-from mo_sql import SQL_NULL
+from jx_sqlite.sqlite import SQL_NULL
 
 
 class AbsOp(AbsOp_):

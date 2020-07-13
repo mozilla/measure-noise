@@ -14,7 +14,7 @@ from jx_sqlite.expressions._utils import SQLang, check
 from jx_sqlite.expressions.boolean_op import BooleanOp
 from mo_dots import wrap
 from mo_logs import Log
-from mo_sql import SQL_IS_NULL, SQL_OR, sql_iso, ConcatSQL, JoinSQL, SQL_EQ
+from jx_sqlite.sqlite import SQL_IS_NULL, SQL_OR, sql_iso, ConcatSQL, JoinSQL, SQL_EQ
 
 
 class SqlEqOp(SqlEqOp_):

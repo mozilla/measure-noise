@@ -16,7 +16,7 @@ from jx_sqlite.sqlite import quote_column
 from jx_sqlite.utils import GUID, quoted_GUID
 from mo_dots import ROOT_PATH, relative_field, wrap
 from mo_json import BOOLEAN, OBJECT
-from mo_sql import SQL_IS_NOT_NULL, SQL_TRUE
+from jx_sqlite.sqlite import SQL_IS_NOT_NULL, SQL_TRUE
 
 
 class Variable(Variable_):

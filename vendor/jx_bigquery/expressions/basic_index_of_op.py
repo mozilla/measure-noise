@@ -13,7 +13,7 @@ from jx_base.expressions import BasicIndexOfOp as BasicIndexOfOp_
 from jx_bigquery.expressions._utils import check
 from jx_bigquery.expressions.literal import Literal
 from mo_dots import wrap
-from mo_sql import SQL_CASE, SQL_ELSE, SQL_END, SQL_THEN, SQL_WHEN, sql_iso
+from jx_bigquery.sql import SQL_CASE, SQL_ELSE, SQL_END, SQL_THEN, SQL_WHEN, sql_iso
 
 
 class BasicIndexOfOp(BasicIndexOfOp_):

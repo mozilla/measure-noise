@@ -13,7 +13,7 @@ from jx_base.expressions import OrOp as OrOp_
 from jx_bigquery.expressions import _utils
 from jx_bigquery.expressions._utils import BQLang, check
 from mo_dots import wrap
-from mo_sql import SQL_OR, sql_iso, JoinSQL
+from jx_bigquery.sql import SQL_OR, sql_iso, JoinSQL
 
 
 class OrOp(OrOp_):

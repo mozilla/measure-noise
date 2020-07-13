@@ -16,7 +16,7 @@ from jx_sqlite.expressions.sql_script import SQLScript
 from jx_sqlite.sqlite import quote_value, sql_call
 from mo_dots import coalesce
 from mo_json import STRING
-from mo_sql import (
+from jx_sqlite.sqlite import (
     SQL,
     SQL_CASE,
     SQL_ELSE,

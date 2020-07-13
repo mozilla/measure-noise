@@ -23,7 +23,7 @@ from mo_dots import Data, Null, concat_field, listwrap, startswith_field, unwrap
 from mo_future import text, first
 from mo_json import STRUCT, NESTED, OBJECT
 from mo_logs import Log
-from mo_sql import SQL_AND, SQL_FROM, SQL_INNER_JOIN, SQL_NULL, SQL_SELECT, SQL_TRUE, SQL_UNION_ALL, SQL_WHERE, \
+from jx_sqlite.sqlite import SQL_AND, SQL_FROM, SQL_INNER_JOIN, SQL_NULL, SQL_SELECT, SQL_TRUE, SQL_UNION_ALL, SQL_WHERE, \
     sql_iso, sql_list, SQL_VALUES, SQL_INSERT, ConcatSQL, SQL_EQ, SQL_UPDATE, SQL_SET, SQL_ONE, SQL_DELETE, SQL_ON, \
     SQL_COMMA
 from mo_times import Date

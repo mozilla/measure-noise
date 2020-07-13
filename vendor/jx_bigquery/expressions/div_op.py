@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import DivOp as DivOp_
 from jx_bigquery.expressions._utils import BQLang, check
+from jx_bigquery.sql import sql_coalesce, sql_iso
 from mo_dots import Null, wrap
-from mo_sql import sql_coalesce, sql_iso
 
 
 class DivOp(DivOp_):

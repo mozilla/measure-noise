@@ -25,7 +25,7 @@ from mo_future import text, unichr
 from mo_json import IS_NULL, STRUCT
 from mo_math import UNION
 from mo_times import Date
-from mo_sql import SQL_AND, SQL_FROM, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_LIMIT, SQL_NULL, SQL_ON, \
+from jx_sqlite.sqlite import SQL_AND, SQL_FROM, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_LIMIT, SQL_NULL, SQL_ON, \
     SQL_ORDERBY, SQL_SELECT, SQL_TRUE, SQL_UNION_ALL, SQL_WHERE, sql_iso, sql_list, ConcatSQL, SQL_STAR, SQL_EQ, \
     SQL_ZERO
 from jx_sqlite.sqlite import quote_column, quote_value, sql_alias

@@ -15,8 +15,8 @@ from jx_bigquery.expressions._utils import BQLang, check
 from jx_bigquery.expressions.length_op import LengthOp
 from jx_bigquery.expressions.sql_eq_op import SqlEqOp
 from jx_bigquery.expressions.sql_substr_op import SqlSubstrOp
+from jx_bigquery.sql import SQL, ConcatSQL, SQL_LIKE, SQL_ESCAPE
 from mo_dots import wrap
-from mo_sql import SQL, ConcatSQL, SQL_LIKE, SQL_ESCAPE
 
 
 class BasicStartsWithOp(BasicStartsWithOp_):

@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import BasicEqOp as BasicEqOp_
 from jx_bigquery.expressions._utils import check
-from mo_sql import SQL
+from jx_bigquery.sql import SQL
 
 
 class BasicEqOp(BasicEqOp_):

@@ -18,7 +18,7 @@ from jx_sqlite.expressions.literal import Literal
 from mo_dots import wrap
 from mo_json import json2value
 from mo_logs import Log
-from mo_sql import SQL_FALSE, SQL_OR, sql_iso, ConcatSQL, SQL_IN
+from jx_sqlite.sqlite import SQL_FALSE, SQL_OR, sql_iso, ConcatSQL, SQL_IN
 
 
 class InOp(InOp_):

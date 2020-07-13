@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import ExistsOp as ExistsOp_
 from jx_sqlite.expressions._utils import check
 from mo_dots import wrap
-from mo_sql import SQL_FALSE, SQL_IS_NOT_NULL, SQL_OR, sql_iso
+from jx_sqlite.sqlite import SQL_FALSE, SQL_IS_NOT_NULL, SQL_OR, sql_iso
 
 
 class ExistsOp(ExistsOp_):

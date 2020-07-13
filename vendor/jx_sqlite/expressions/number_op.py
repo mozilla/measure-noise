@@ -13,7 +13,7 @@ from jx_base.expressions import NumberOp as NumberOp_
 from jx_sqlite.expressions import _utils
 from jx_sqlite.expressions._utils import SQLang, check
 from mo_dots import wrap
-from mo_sql import sql_coalesce
+from jx_sqlite.sqlite import sql_coalesce
 
 
 class NumberOp(NumberOp_):

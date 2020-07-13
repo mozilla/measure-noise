@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import RangeOp as RangeOp_
 from jx_sqlite.expressions._utils import check
 from mo_dots import wrap
-from mo_sql import SQL_CASE, SQL_ELSE, SQL_END, SQL_NULL, SQL_THEN, SQL_WHEN
+from jx_sqlite.sqlite import SQL_CASE, SQL_ELSE, SQL_END, SQL_NULL, SQL_THEN, SQL_WHEN
 
 
 class RangeOp(RangeOp_):

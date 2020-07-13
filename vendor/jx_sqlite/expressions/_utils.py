@@ -9,7 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_sql import (
+from jx_sqlite.sqlite import (
     SQL,
     SQL_FALSE,
     SQL_NULL,

@@ -18,7 +18,7 @@ from mo_dots import concat_field, wrap
 from mo_future import text
 from mo_json import NESTED
 from mo_logs import Log
-from mo_sql import SQL_FROM, SQL_LIMIT, SQL_SELECT, SQL_STAR, SQL_ZERO, sql_iso, sql_list, SQL_CREATE, SQL_AS
+from jx_sqlite.sqlite import SQL_FROM, SQL_LIMIT, SQL_SELECT, SQL_STAR, SQL_ZERO, sql_iso, sql_list, SQL_CREATE, SQL_AS
 
 
 class Snowflake(jx_base.Snowflake):

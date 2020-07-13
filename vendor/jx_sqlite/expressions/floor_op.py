@@ -13,7 +13,7 @@ from jx_base.expressions import FloorOp as FloorOp_
 from jx_sqlite.expressions._utils import SQLang, check
 from mo_dots import wrap
 from mo_future import text
-from mo_sql import sql_iso
+from jx_sqlite.sqlite import sql_iso
 
 
 class FloorOp(FloorOp_):

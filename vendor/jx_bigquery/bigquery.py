@@ -43,7 +43,7 @@ from mo_json import INTEGER
 from mo_kwargs import override
 from mo_logs import Log, Except
 from mo_math.randoms import Random
-from mo_sql import (
+from jx_bigquery.sql import (
     ConcatSQL,
     SQL,
     SQL_SELECT,

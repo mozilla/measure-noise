@@ -14,7 +14,7 @@ from jx_bigquery.expressions._utils import check, BQLang
 from jx_bigquery.expressions.bql_script import BQLScript
 from jx_bigquery.sql import sql_call
 from mo_json import BOOLEAN
-from mo_sql import SQL_TRUE, ConcatSQL, SQL_ONE, SQL_EQ
+from jx_bigquery.sql import SQL_TRUE, ConcatSQL, SQL_ONE, SQL_EQ
 
 
 class PrefixOp(PrefixOp_):

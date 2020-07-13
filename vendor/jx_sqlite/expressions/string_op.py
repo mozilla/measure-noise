@@ -14,7 +14,7 @@ from jx_sqlite.sqlite import quote_value
 from jx_base.expressions import StringOp as StringOp_
 from jx_sqlite.expressions._utils import SQLang, check
 from mo_dots import wrap
-from mo_sql import (
+from jx_sqlite.sqlite import (
     SQL_CASE,
     SQL_ELSE,
     SQL_END,

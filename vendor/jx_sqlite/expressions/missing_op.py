@@ -13,7 +13,7 @@ from jx_base.expressions import MissingOp as MissingOp_
 from jx_base.language import is_op
 from jx_sqlite.expressions._utils import SQLang, check
 from mo_dots import wrap
-from mo_sql import (
+from jx_sqlite.sqlite import (
     SQL_AND,
     SQL_EMPTY_STRING,
     SQL_FALSE,

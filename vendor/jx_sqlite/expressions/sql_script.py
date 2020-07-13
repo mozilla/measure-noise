@@ -15,7 +15,7 @@ from jx_sqlite.expressions._utils import json_type_to_sql_type, SQLang, check
 from mo_dots import coalesce, wrap
 from mo_future import PY2, text
 from mo_logs import Log
-from mo_sql import (
+from jx_sqlite.sqlite import (
     SQL,
     SQL_CASE,
     SQL_END,

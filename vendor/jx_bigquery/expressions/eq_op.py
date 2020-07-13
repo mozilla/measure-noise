@@ -13,19 +13,18 @@ from jx_base.expressions import (
     EqOp as EqOp_,
     FALSE,
     TRUE,
-    ZERO,
     simplified,
 )
 from jx_base.expressions._utils import builtin_ops
 from jx_bigquery.expressions._utils import BQLang, check
+from jx_bigquery.expressions.bql_script import BQLScript
 from jx_bigquery.expressions.case_op import CaseOp
 from jx_bigquery.expressions.literal import Literal
 from jx_bigquery.expressions.sql_eq_op import SqlEqOp
-from jx_bigquery.expressions.bql_script import BQLScript
 from jx_bigquery.expressions.when_op import WhenOp
+from jx_bigquery.sql import sql_iso, SQL_EQ, ConcatSQL
 from mo_json import BOOLEAN, STRUCT
 from mo_logs import Log
-from mo_sql import SQL_FALSE, SQL_IS_NULL, SQL_OR, sql_iso, SQL_EQ, ConcatSQL
 
 
 class EqOp(EqOp_):

@@ -19,7 +19,7 @@ from jx_sqlite.expressions.or_op import OrOp
 from jx_sqlite.expressions.sql_instr_op import SqlInstrOp
 from jx_sqlite.sqlite import sql_call, quote_column
 from mo_dots import coalesce, wrap
-from mo_sql import (
+from jx_sqlite.sqlite import (
     SQL,
     SQL_CASE,
     SQL_ELSE,

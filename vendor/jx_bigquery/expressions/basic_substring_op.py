@@ -15,7 +15,7 @@ from jx_bigquery.expressions.add_op import AddOp
 from jx_bigquery.expressions.literal import Literal
 from jx_bigquery.expressions.sub_op import SubOp
 from mo_dots import wrap
-from mo_sql import sql_iso
+from jx_bigquery.sql import sql_iso
 
 
 class BasicSubstringOp(BasicSubstringOp_):

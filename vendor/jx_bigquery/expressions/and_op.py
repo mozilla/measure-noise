@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import AndOp as AndOp_, TRUE, FALSE
 from jx_bigquery.expressions._utils import check, BQLScript
 from mo_json import BOOLEAN
-from mo_sql import SQL_AND, JoinSQL
+from jx_bigquery.sql import SQL_AND, JoinSQL
 
 
 class AndOp(AndOp_):

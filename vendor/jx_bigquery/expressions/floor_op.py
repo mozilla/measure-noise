@@ -13,7 +13,7 @@ from jx_base.expressions import FloorOp as FloorOp_
 from jx_bigquery.expressions._utils import BQLang, check
 from mo_dots import wrap
 from mo_future import text
-from mo_sql import sql_iso
+from jx_bigquery.sql import sql_iso
 
 
 class FloorOp(FloorOp_):

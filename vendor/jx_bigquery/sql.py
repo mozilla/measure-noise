@@ -15,36 +15,9 @@ from jx_base.query import _normalize_sort, _normalize_select
 from jx_python import jx
 from mo_dots import wrap, split_field
 from mo_files.url import hex2chr
-from mo_future import text, first, is_text
-from mo_logs import Log
-from mo_sql import (
-    SQL,
-    SQL_NULL,
-    SQL_SELECT,
-    sql_iso,
-    sql_list,
-    SQL_AND,
-    ConcatSQL,
-    SQL_EQ,
-    SQL_IS_NULL,
-    SQL_COMMA,
-    JoinSQL,
-    SQL_FROM,
-    SQL_WHERE,
-    SQL_ORDERBY,
-    SQL_LT,
-    SQL_AS,
-    SQL_ASC,
-    SQL_DESC,
-    SQL_LIMIT,
-    SQL_ZERO,
-    SQL_ONE,
-    SQL_PLUS,
-    SQL_STAR,
-)
+from mo_future import text, first
+from mo_sql import *
 from mo_times import Date, Duration
-
-_keep_import = (SQL_ZERO, SQL_ONE, SQL_PLUS, SQL_STAR)
 
 SQL_TRUE = SQL(" TRUE ")
 SQL_FALSE = SQL(" FALSE ")

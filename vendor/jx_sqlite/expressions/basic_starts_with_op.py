@@ -15,7 +15,7 @@ from jx_sqlite.expressions.sql_eq_op import SqlEqOp
 from jx_sqlite.expressions.sql_instr_op import SqlInstrOp
 from jx_sqlite.sqlite import quote_value
 from mo_dots import wrap
-from mo_sql import SQL, ConcatSQL, SQL_LIKE, SQL_ESCAPE, SQL_ONE
+from jx_sqlite.sqlite import SQL, ConcatSQL, SQL_LIKE, SQL_ESCAPE, SQL_ONE
 
 
 class BasicStartsWithOp(BasicStartsWithOp_):

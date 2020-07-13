@@ -14,7 +14,7 @@ from jx_base.language import is_op
 from jx_sqlite.expressions._utils import check
 from jx_sqlite.expressions.boolean_op import BooleanOp
 from mo_dots import wrap
-from mo_sql import sql_iso
+from jx_sqlite.sqlite import sql_iso
 
 
 class NotOp(NotOp_):

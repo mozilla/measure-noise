@@ -14,32 +14,8 @@ from __future__ import unicode_literals
 
 from copy import deepcopy, copy
 
-from jx_python import jx
-from mo_collections import UniqueIndex
-from mo_dots import (
-    coalesce,
-    Data,
-    wrap,
-    Null,
-    FlatList,
-    unwrap,
-    join_field,
-    split_field,
-    relative_field,
-    concat_field,
-    literal_field,
-    set_default,
-    startswith_field,
-    listwrap,
-)
-from mo_dots.lists import last
-from mo_future import text, sort_using_key, first
-from mo_kwargs import override
-from mo_logs import Log, strings
-from mo_logs.exceptions import Explanation
-from mo_math.randoms import Random
-from mo_times import Timer
-from mo_sql import (
+from jx_mysql.mysql import MySQL, quote_column, sql_alias
+from jx_mysql.mysql import (
     SQL_SELECT,
     sql_list,
     SQL_NULL,
@@ -59,7 +35,30 @@ from mo_sql import (
     SQL_LIMIT,
     SQL_ONE,
 )
-from jx_mysql.mysql import MySQL, quote_column, sql_alias
+from jx_python import jx
+from mo_collections import UniqueIndex
+from mo_dots import (
+    coalesce,
+    Data,
+    wrap,
+    Null,
+    FlatList,
+    unwrap,
+    join_field,
+    split_field,
+    relative_field,
+    concat_field,
+    literal_field,
+    set_default,
+    startswith_field,
+    listwrap,
+)
+from mo_future import text, sort_using_key, first
+from mo_kwargs import override
+from mo_logs import Log, strings
+from mo_logs.exceptions import Explanation
+from mo_math.randoms import Random
+from mo_times import Timer
 
 DEBUG = False
 

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import CaseOp as CaseOp_
 from jx_bigquery.expressions._utils import BQLang, check
 from mo_dots import coalesce, wrap
-from mo_sql import (
+from jx_bigquery.sql import (
     SQL_CASE,
     SQL_ELSE,
     SQL_END,

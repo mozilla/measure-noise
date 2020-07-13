@@ -20,7 +20,7 @@ from jx_sqlite.snowflake import Snowflake
 from mo_future import first, PY3, NEXT
 from mo_kwargs import override
 from mo_logs import Log
-from mo_sql import (
+from jx_sqlite.sqlite import (
     SQL_SELECT,
     SQL_FROM,
     SQL_UPDATE,

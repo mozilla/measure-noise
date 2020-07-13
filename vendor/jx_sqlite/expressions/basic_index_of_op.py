@@ -14,7 +14,7 @@ from jx_sqlite.expressions._utils import check
 from jx_sqlite.expressions.literal import Literal
 from jx_sqlite.sqlite import sql_call
 from mo_dots import wrap
-from mo_sql import SQL_CASE, SQL_ELSE, SQL_END, SQL_THEN, SQL_WHEN, sql_iso, SQL_ONE
+from jx_sqlite.sqlite import SQL_CASE, SQL_ELSE, SQL_END, SQL_THEN, SQL_WHEN, sql_iso, SQL_ONE
 
 
 class BasicIndexOfOp(BasicIndexOfOp_):

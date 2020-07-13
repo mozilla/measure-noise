@@ -12,11 +12,11 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import MissingOp as MissingOp_, FALSE
 from jx_base.language import is_op
 from jx_bigquery.expressions._utils import BQLang, check, BQLScript
-from mo_json import OBJECT, BOOLEAN
-from mo_sql import (
+from jx_bigquery.sql import (
     SQL_IS_NULL,
     sql_iso,
     ConcatSQL)
+from mo_json import OBJECT, BOOLEAN
 
 
 class MissingOp(MissingOp_):

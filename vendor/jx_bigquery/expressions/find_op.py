@@ -18,7 +18,7 @@ from jx_bigquery.expressions.not_right_op import NotRightOp
 from jx_bigquery.expressions.or_op import OrOp
 from jx_bigquery.expressions.sql_instr_op import SqlInstrOp
 from mo_dots import coalesce, wrap
-from mo_sql import (
+from jx_bigquery.sql import (
     SQL,
     SQL_CASE,
     SQL_ELSE,

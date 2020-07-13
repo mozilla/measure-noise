@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import FromUnixOp as FromUnixOp_
 from jx_sqlite.expressions._utils import check
 from mo_dots import wrap
-from mo_sql import sql_iso
+from jx_sqlite.sqlite import sql_iso
 
 
 class FromUnixOp(FromUnixOp_):

@@ -14,7 +14,7 @@ from jx_bigquery.sql import quote_value
 from jx_base.expressions import StringOp as StringOp_
 from jx_bigquery.expressions._utils import BQLang, check
 from mo_dots import wrap
-from mo_sql import (
+from jx_bigquery.sql import (
     SQL_CASE,
     SQL_ELSE,
     SQL_END,

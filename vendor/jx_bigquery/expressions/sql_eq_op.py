@@ -13,9 +13,9 @@ from jx_base.expressions import FALSE, SqlEqOp as SqlEqOp_
 from jx_base.expressions.literal import is_literal
 from jx_bigquery.expressions._utils import BQLang, check
 from jx_bigquery.expressions.boolean_op import BooleanOp
+from jx_bigquery.sql import SQL_IS_NULL, SQL_OR, sql_iso, ConcatSQL, JoinSQL, SQL_EQ
 from mo_dots import wrap
 from mo_logs import Log
-from mo_sql import SQL_IS_NULL, SQL_OR, sql_iso, ConcatSQL, JoinSQL, SQL_EQ
 
 
 class SqlEqOp(SqlEqOp_):

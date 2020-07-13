@@ -13,7 +13,7 @@ from jx_base.expressions import NULL, SqlSubstrOp as SqlSubstrOp_
 from jx_bigquery.expressions._utils import check
 from jx_bigquery.expressions.literal import Literal
 from mo_dots import wrap
-from mo_sql import sql_iso, sql_list
+from jx_bigquery.sql import sql_iso, sql_list
 
 
 class SqlSubstrOp(SqlSubstrOp_):

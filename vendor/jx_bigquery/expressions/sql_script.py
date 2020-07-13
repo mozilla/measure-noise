@@ -11,10 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import FALSE, NULL, ONE, SQLScript as SQLScript_, TRUE, ZERO
 from jx_bigquery.expressions._utils import json_type_to_sql_type, SQLang, check
-from mo_dots import coalesce, wrap
-from mo_future import PY2, text
-from mo_logs import Log
-from mo_sql import (
+from jx_bigquery.sql import (
     SQL,
     SQL_CASE,
     SQL_END,
@@ -25,6 +22,9 @@ from mo_sql import (
     ConcatSQL,
     SQL_NOT,
 )
+from mo_dots import coalesce, wrap
+from mo_future import PY2, text
+from mo_logs import Log
 
 
 class SQLScript(SQLScript_, SQL):

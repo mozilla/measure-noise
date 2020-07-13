@@ -13,7 +13,7 @@ from jx_base.expressions import NotRightOp as NotRightOp_
 from jx_sqlite.expressions._utils import check
 from jx_sqlite.sqlite import sql_call
 from mo_dots import wrap
-from mo_sql import SQL_ONE, SQL_ZERO, SQL
+from jx_sqlite.sqlite import SQL_ONE, SQL_ZERO, SQL
 
 
 class NotRightOp(NotRightOp_):

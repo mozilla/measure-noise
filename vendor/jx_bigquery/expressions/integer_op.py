@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import IntegerOp as IntegerOp_
 from jx_bigquery.expressions._utils import check
 from mo_dots import wrap
-from mo_sql import sql_coalesce
+from jx_bigquery.sql import sql_coalesce
 
 
 class IntegerOp(IntegerOp_):

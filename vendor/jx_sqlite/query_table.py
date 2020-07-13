@@ -29,7 +29,7 @@ from mo_dots import Data, Null, coalesce, concat_field, is_list, listwrap, relat
 from mo_future import text, transpose
 from mo_json import STRING, STRUCT
 from mo_logs import Log
-from mo_sql import SQL_FROM, SQL_ORDERBY, SQL_SELECT, SQL_WHERE, sql_count, sql_iso, sql_list, SQL_CREATE, \
+from jx_sqlite.sqlite import SQL_FROM, SQL_ORDERBY, SQL_SELECT, SQL_WHERE, sql_count, sql_iso, sql_list, SQL_CREATE, \
     SQL_AS, SQL_DELETE, ConcatSQL, JoinSQL, SQL_COMMA, SQL
 from jx_sqlite.sqlite import quote_column, sql_alias
 

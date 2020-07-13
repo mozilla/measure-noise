@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import SqlInstrOp as SqlInstrOp_
 from jx_bigquery.expressions._utils import check
 from mo_dots import wrap
-from mo_sql import sql_iso, sql_list
+from jx_bigquery.sql import sql_iso, sql_list
 
 
 class SqlInstrOp(SqlInstrOp_):

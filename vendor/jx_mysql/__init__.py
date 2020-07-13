@@ -23,7 +23,7 @@ from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_logs.strings import expand_template
-from mo_sql import SQL, SQL_ORDERBY, SQL_LIMIT, sql_list, SQL_WHERE
+from jx_mysql.mysql import SQL, SQL_ORDERBY, SQL_LIMIT, sql_list, SQL_WHERE
 
 
 class MySQL_forBugzilla(object):
