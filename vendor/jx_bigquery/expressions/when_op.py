@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import WhenOp as WhenOp_
 from jx_bigquery.expressions._utils import BQLang, check
+from jx_bigquery.sql import SQL_CASE, SQL_ELSE, SQL_END, SQL_NULL, SQL_THEN, SQL_WHEN
 from mo_dots import wrap
-jx_bigquery.sql import SQL_CASE, SQL_ELSE, SQL_END, SQL_NULL, SQL_THEN, SQL_WHEN
 
 
 class WhenOp(WhenOp_):
