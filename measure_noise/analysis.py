@@ -12,9 +12,11 @@ from __future__ import absolute_import, division, unicode_literals
 import numpy as np
 
 import mo_math
+from jx_base import jx_expression
 from jx_base.expressions import TRUE
 from jx_bigquery import bigquery
-from jx_bigquery.sql import quote_column, quote_value
+from jx_bigquery.expressions import BQLang
+from jx_bigquery.sql import quote_column, quote_value, sql_iso
 from jx_python import jx
 from measure_noise import deviance, step_detector
 from measure_noise.extract_perf import get_signature, get_dataum
@@ -314,6 +316,9 @@ def main():
 
     # DOWNLOAD
     if config.args.download:
+        # GET INTERESTING SERIES
+        where_clause = BQLang[jx_expression(config.analysis.interesting)].to_bq(deviant_summary.schema)
+
         # GET ALL KNOWN SERIES
         docs = list(deviant_summary.sql_query(f"""
             SELECT * EXCEPT (_rank, values) 
@@ -324,7 +329,7 @@ def main():
               FROM  
                 {quote_column(deviant_summary.full_name)}
               ) a 
-            WHERE _rank=1
+            WHERE _rank=1 and {sql_iso(where_clause)}
             LIMIT {quote_value(DOWNLOAD_LIMIT)}
         """))
         if len(docs) == DOWNLOAD_LIMIT:
