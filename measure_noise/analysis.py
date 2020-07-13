@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import numpy as np
+import webbrowser
 
 import mo_math
 from jx_base import jx_expression
@@ -25,6 +26,7 @@ from measure_noise.utils import assign_colors, histogram
 from mo_collections import left
 from mo_dots import Data, coalesce, unwrap, to_data
 from mo_files import File
+from mo_files.url import value2url_param
 from mo_future import text
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
@@ -49,7 +51,7 @@ def process(
     show=False,
     show_limit=MAX_POINTS,
     show_old=False,
-    show_distribution=None
+    show_distribution=None,
 ):
     """
     :param signature_hash: The performance hash
@@ -94,11 +96,18 @@ def process(
                 sig.test,
                 sig.platform,
                 sig.repository,
-                about_deviant.overall_dev_status
+                about_deviant.overall_dev_status,
             ],
         )
     )
-    Log.note("With {{title}}", title=title)
+    # EG https://treeherder.mozilla.org/perf.html#/graphs?highlightAlerts=1&series=mozilla-central,fee739b45f7960e4a520d8e0bd781dd9d0a3bec4,1,10&timerange=31536000
+    url = "https://treeherder.mozilla.org/perf.html#/graphs?" + value2url_param({
+        "highlightAlerts": 1,
+        "series": [sig.repository, sig.id, 1, coalesce(sig.framework, sig.framework_id)],
+        "timerange": 31536000,
+    })
+
+    Log.note("With {{title}}: {{url}}", title=title, url=url)
 
     with Timer("find segments"):
         new_segments, new_diffs = find_segments(
@@ -115,8 +124,7 @@ def process(
         )
     )
     old_medians = [0.0] + [
-        np.median(values[s:e])
-        for s, e in zip(old_segments[:-1], old_segments[1:])
+        np.median(values[s:e]) for s, e in zip(old_segments[:-1], old_segments[1:])
     ]
     old_diffs = np.array(
         [b / a - 1 for a, b in zip(old_medians[:-1], old_medians[1:])] + [0]
@@ -156,11 +164,13 @@ def process(
             deviance=(overall_dev_status, overall_dev_score),
             std=relative_noise,
             pushes=len(values),
-            num_segments=len(new_segments)-1
+            num_segments=len(new_segments) - 1,
         )
 
         if show_distribution:
-            histogram(trimmed_segment, title=last_dev_status+"="+text(last_dev_score))
+            histogram(
+                trimmed_segment, title=last_dev_status + "=" + text(last_dev_score)
+            )
 
     max_extra_diff = None
     max_missing_diff = None
@@ -190,6 +200,8 @@ def process(
     if show and len(pushes):
         show_old and assign_colors(values, old_segments, title="OLD " + title)
         assign_colors(values, new_segments, title="NEW " + title)
+        if url:
+            webbrowser.open(url)
 
     if isinstance(deviant_summary, bigquery.Table):
         Log.note("BigQuery summary not updated")
@@ -201,7 +213,7 @@ def process(
             id=signature_hash,
             title=title,
             num_pushes=len(values),
-            num_segments=len(new_segments)-1,
+            num_segments=len(new_segments) - 1,
             relative_noise=relative_noise,
             overall_dev_status=overall_dev_status,
             overall_dev_score=overall_dev_score,
@@ -240,7 +252,12 @@ def update_local_database(config, deviant_summary, candidates, since):
     exists = deviant_summary.query(
         {
             "select": ["signature_hash", "last_updated"],
-            "where": {"and": [{"in": {"signature_hash": candidates.signature_hash}}, {"exists": "num_pushes"}]},
+            "where": {
+                "and": [
+                    {"in": {"signature_hash": candidates.signature_hash}},
+                    {"exists": "num_pushes"},
+                ]
+            },
             "sort": "last_updated",
             "limit": 100000,
             "format": "list",
@@ -250,7 +267,9 @@ def update_local_database(config, deviant_summary, candidates, since):
     missing = list(set(candidates.signature_hash) - set(exists.signature_hash))
 
     too_old = Date.today() - parse(LOCAL_RETENTION)
-    needs_update = missing + [e.signature_hash for e in exists if e.last_updated < too_old.unix]
+    needs_update = missing + [
+        e.signature_hash for e in exists if e.last_updated < too_old.unix
+    ]
     Log.alert("{{num}} series are candidates for local update", num=len(needs_update))
 
     limited_update = Queue("sigs")
@@ -266,7 +285,12 @@ def update_local_database(config, deviant_summary, candidates, since):
                 signature_hash = limited_update.pop_one()
                 if not signature_hash:
                     return
-                process(signature_hash, since, source=config.database, deviant_summary=deviant_summary)
+                process(
+                    signature_hash,
+                    since,
+                    source=config.database,
+                    deviant_summary=deviant_summary,
+                )
 
         threads = [Thread.run(text(i), loop) for i in range(3)]
         for t in threads:
@@ -275,18 +299,30 @@ def update_local_database(config, deviant_summary, candidates, since):
     Log.note("Local database is up to date")
 
 
-def show_sorted(config, since, source, deviant_summary, sort, limit, where=TRUE, show_distribution=None, show_old=False):
+def show_sorted(
+    config,
+    since,
+    source,
+    deviant_summary,
+    sort,
+    limit,
+    where=TRUE,
+    show_distribution=None,
+    show_old=False,
+):
     if not limit:
         return
 
-    tops = list(deviant_summary.jx_query(
-        {
-            "where": {"and": [where, config.analysis.interesting]},
-            "sort": sort,
-            "limit": limit,
-            "format": "list",
-        }
-    ).data)
+    tops = list(
+        deviant_summary.jx_query(
+            {
+                "where": {"and": [where, config.analysis.interesting]},
+                "sort": sort,
+                "limit": limit,
+                "format": "list",
+            }
+        ).data
+    )
 
     for doc in tops:
         process(
@@ -296,31 +332,43 @@ def show_sorted(config, since, source, deviant_summary, sort, limit, where=TRUE,
             deviant_summary=deviant_summary,
             show=True,
             show_distribution=show_distribution,
-            show_old=show_old
+            show_old=show_old,
         )
 
 
 def main():
-    since = Date.today()-LOOK_BACK
+    since = Date.today() - LOOK_BACK
 
     # SETUP DESTINATION
-    deviant_summary = bigquery.Dataset(config.deviant_summary).get_or_create_table(read_only=True, kwargs=config.deviant_summary)
+    deviant_summary = bigquery.Dataset(config.deviant_summary).get_or_create_table(
+        read_only=True, kwargs=config.deviant_summary
+    )
 
     if config.args.id:
         # EXIT EARLY AFTER WE GOT THE SPECIFIC IDS
         if len(config.args.id) < 4:
             step_detector.SHOW_CHARTS = True
         for signature_hash in config.args.id:
-            process(signature_hash, since=since, source=config.database, deviant_summary=deviant_summary, show=True)
+            process(
+                signature_hash,
+                since=since,
+                source=config.database,
+                deviant_summary=deviant_summary,
+                show=True,
+            )
         return
 
     # DOWNLOAD
     if config.args.download:
         # GET INTERESTING SERIES
-        where_clause = BQLang[jx_expression(config.analysis.interesting)].to_bq(deviant_summary.schema)
+        where_clause = BQLang[jx_expression(config.analysis.interesting)].to_bq(
+            deviant_summary.schema
+        )
 
         # GET ALL KNOWN SERIES
-        docs = list(deviant_summary.sql_query(f"""
+        docs = list(
+            deviant_summary.sql_query(
+                f"""
             SELECT * EXCEPT (_rank, values) 
             FROM (
               SELECT 
@@ -331,11 +379,12 @@ def main():
               ) a 
             WHERE _rank=1 and {sql_iso(where_clause)}
             LIMIT {quote_value(DOWNLOAD_LIMIT)}
-        """))
+        """
+            )
+        )
         if len(docs) == DOWNLOAD_LIMIT:
             Log.warning("Not all signatures downloaded")
         File(config.args.download).write(list2tab(docs, separator=","))
-
 
     # DEVIANT
     show_sorted(
