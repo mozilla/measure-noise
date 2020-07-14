@@ -9,8 +9,9 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-import numpy as np
 import webbrowser
+
+import numpy as np
 
 import mo_math
 from jx_base import jx_expression
