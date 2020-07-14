@@ -8,15 +8,6 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions._utils import operators, jx_expression, _jx_expression, simplified
@@ -138,19 +129,13 @@ class Expression(BaseExpression):
         OVERRIDE THIS METHOD TO SIMPLIFY
         :return:
         """
-        return self.lang[NotOp(self.missing()).partial_eval()]
+        return self.lang[NotOp(self.missing())].partial_eval()
 
-    def is_true(self):
+    def invert(self):
         """
-        :return: True, IF THIS EXPRESSION ALWAYS RETURNS BOOLEAN true
+        :return: TRUE IF FALSE
         """
-        return FALSE  # GOOD DEFAULT ASSUMPTION
-
-    def is_false(self):
-        """
-        :return: True, IF THIS EXPRESSION ALWAYS RETURNS BOOLEAN false
-        """
-        return FALSE  # GOOD DEFAULT ASSUMPTION
+        return self.lang[NotOp(self)]
 
     @simplified
     def partial_eval(self):

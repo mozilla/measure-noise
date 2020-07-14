@@ -176,7 +176,7 @@ def sql_lt(**item):
     return ConcatSQL(quote_column(k), SQL_LT, quote_value(v))
 
 
-def sql_query(query, schema):
+def sql_query(query, schema=None):
     """
     VERY BASIC QUERY EXPRESSION TO SQL
     :param query: jx-expression
@@ -188,7 +188,7 @@ def sql_query(query, schema):
     query = wrap(query)
 
     acc = [SQL_SELECT]
-
+    
     select = _normalize_select(query.select, query["from"], schema)
     acc.append(
         JoinSQL(

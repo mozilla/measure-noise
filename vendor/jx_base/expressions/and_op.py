@@ -8,20 +8,11 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.boolean_op import BooleanOp
-from jx_base.expressions.expression import Expression
+from jx_base.expressions.expression import Expression, NULL
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
@@ -65,10 +56,25 @@ class AndOp(Expression):
     def missing(self):
         return FALSE
 
+    def invert(self):
+        return self.lang[OrOp([t.invert() for t in self.terms])].partial_eval()
+
     @simplified
     def partial_eval(self):
+
+        # MERGE IDENTICAL NESTED QUERIES
+
+        # NEST DEEP NESTED QUERIES
+
+
+
         or_terms = [[]]  # LIST OF TUPLES FOR or-ing and and-ing
         for i, t in enumerate(self.terms):
+            try:
+                if t.terms[1].frum is NULL:
+                    pass
+            except Exception as cause:
+                pass
             simple = self.lang[BooleanOp(t)].partial_eval()
             if simple.type != BOOLEAN:
                 simple = simple.exists()

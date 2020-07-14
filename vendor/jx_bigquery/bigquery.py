@@ -240,7 +240,7 @@ class Dataset(BaseContainer):
             SQL("CREATE VIEW\n"),
             quote_column(view_api_name),
             SQL_AS,
-            sql_query({"from": shard_api_name}),
+            SQL(f"SELECT * FROM {quote_column(shard_api_name)}"),
         )
         job = self.query_and_wait(sql)
         if job.errors:
@@ -706,9 +706,9 @@ def _extract_primary_shard_name(view_sql):
 def gen_select(total_flake, flake):
     """
     GENERATE SELECT CLAUSE
-    :param total_flake:
-    :param flake:
-    :return:
+    :param total_flake:  THE DESTINATION SCHEMA TO MATCH
+    :param flake:  THE SCHEMA SELECTING FROM
+    :return:  SQL
     """
 
     def _gen_select(

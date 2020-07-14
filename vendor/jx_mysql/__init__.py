@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 import mo_json
+from jx_mysql.mysql import SQL, SQL_ORDERBY, SQL_LIMIT, sql_list, SQL_WHERE
 from jx_mysql.mysql import int_list_packer, quote_column, quote_value, quote_list, sql_alias, _esfilter2sqlwhere
 from mo_collections.matrix import Matrix
 from mo_dots import listwrap, unwrap
@@ -23,7 +24,6 @@ from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_logs.strings import expand_template
-from jx_mysql.mysql import SQL, SQL_ORDERBY, SQL_LIMIT, sql_list, SQL_WHERE
 
 
 class MySQL_forBugzilla(object):

@@ -163,7 +163,7 @@ def params_pack(params, *args):
                 continue
             settings[k] = v
 
-    output = {str(k): unwrap(settings[k]) for k in params if k in settings}
+    output = {str(k): from_data(settings[k]) for k in params if k in settings}
     return output
 
 
