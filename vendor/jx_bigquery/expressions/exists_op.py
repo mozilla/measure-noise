@@ -19,7 +19,7 @@ from jx_bigquery.sql import SQL_IS_NOT_NULL, ConcatSQL
 class ExistsOp(ExistsOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
-        field = BQLang[self.field].to_bq(schema)
+        field = BQLang[self.expr].to_bq(schema)
 
         return BQLScript(
             data_type=BOOLEAN,
