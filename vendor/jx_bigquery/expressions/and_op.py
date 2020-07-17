@@ -22,7 +22,7 @@ class AndOp(AndOp_):
             return TRUE.to_bq(schema)
 
         return BQLScript(
-            expr=JoinSQL(SQL_AND, [self.lang[t].to_bq(schema)for t in self.terms]),
+            expr=JoinSQL(SQL_AND, [self.lang[t].to_bq(schema) for t in self.terms if t != None]),
             data_type=BOOLEAN,
             frum=self,
             miss=FALSE,

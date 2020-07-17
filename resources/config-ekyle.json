@@ -1,0 +1,56 @@
+{
+    "database": {
+        "schema": "treeherder",
+        "ssl": {
+            "pem": "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
+        },
+        "$ref": "~/private.json#treeherder",
+        "debug": false,
+    },
+    "deviant_summary": {
+        "account_info": {
+            "$ref": "file:///e:/moz-fx-dev-ekyle-treeherder-a838a7718652.json"
+        },
+        "dataset": "dev-deviant",
+        "table": "noise",
+        "schema": {
+            "id": "string",
+            "push.id": "integer",
+            "push.date": "time",
+            "last_updated": "time",
+        },
+        "top_level_fields": {"id": "id", "last_updated": "last_updated"},
+        "partition": {"field": "last_updated", "expire": "1year"},
+        "id": {"field": "id", "version": "last_updated"},
+        "cluster": ["id"],
+        "sharded": true,
+    },
+    "analysis": {
+        "download_limit": 10,
+        "local_db": {
+            "filename": "deviant_summary.sqlite",
+            "debug": false,
+            "upgrade": false,
+        },
+        "signatures_sql": {
+            "$concat": [
+                "SELECT s.signature_hash",
+                "FROM performance_signature s",
+                "WHERE",
+                "s.framework_id = 10 AND",
+                "(s.should_alert is NULL or s.should_alert <> 0) AND",
+                "(s.test IS NULL or s.test='' or s.test=s.suite) AND",
+                "s.repository_id = 77  -- autoland",
+                "GROUP BY s.id",
+            ],
+            "separator": "\n",
+        },
+    },
+    "constants": {
+        "mo_http.http.default_headers": {
+            "Referer": "https://github.com/mozilla/measure-noise"
+        },
+        "measure_noise.step_detector.SHOW_CHARTS": false,
+    },
+    "debug": {"trace": true, "cprofile": false},
+}

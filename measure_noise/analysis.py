@@ -340,6 +340,9 @@ def show_sorted(
 def main():
     since = Date.today() - LOOK_BACK
 
+    if not config.analysis.interesting:
+        Log.alert("Expecting config file to have `analysis.interesting` with a json expression.  All series are included.")
+
     # SETUP DESTINATION
     deviant_summary = bigquery.Dataset(config.deviant_summary).get_or_create_table(
         read_only=True, kwargs=config.deviant_summary
