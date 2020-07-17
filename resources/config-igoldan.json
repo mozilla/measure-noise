@@ -29,7 +29,6 @@
         "download_limit": 10,
         "interesting": {
             "and": [
-                {"exists": "framework_id"},  // REQUIRED UNTIL ALL SERIES HAVE THIS ID (FOR URL CONSTRUCITON)
                 {"in": {"repository": ["mozilla-beta", "autoland"]}},
                 {"not": {"in": {"framework": ["build_metrics", "vcs"]}}},
                 {"not": {"prefix": {"application": "chrome"}}},

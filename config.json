@@ -5,13 +5,9 @@
         "ssl": {
             "pem": "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
         },
-        "$ref": "~/private.json#treeherder",
         "debug": false,
     },
     "deviant_summary": {
-        "account_info": {
-            "$ref": "file:///e:/moz-fx-dev-ekyle-treeherder-a838a7718652.json"
-        },
         "dataset": "dev-deviant",
         "table": "noise",
         "schema": {
@@ -40,7 +36,6 @@
     "analysis": {
         "download_limit": 10,
         "interesting": {"and": [
-            {"exists": "framework_id"},  // REQUIRED UNTIL ALL SERIES HAVE THIS ID (FOR URL CONSTRUCITON)
             {"in": {"repository":["mozilla-beta", "autoland"]}},
             {"not": {"in": {"framework": ["build_metrics", "vcs"]}}},
             {"not": {"prefix": {"application": "chrome"}}}
