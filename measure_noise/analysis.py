@@ -92,11 +92,12 @@ def process(
         map(
             str,
             [
+                sig.id,
                 sig.framework,
                 sig.suite,
                 sig.test,
-                sig.platform,
                 sig.repository,
+                sig.platform,
                 about_deviant.overall_dev_status,
             ],
         )
