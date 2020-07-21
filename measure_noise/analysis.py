@@ -32,7 +32,7 @@ from mo_future import text
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
 from mo_threads import Queue, Thread
-from mo_times import MONTH, Date, Timer
+from mo_times import MONTH, Date, Timer, Duration
 from mo_times.dates import parse
 from pyLibrary.convert import list2tab
 
@@ -339,7 +339,7 @@ def show_sorted(
 
 
 def main():
-    since = Date.today() - LOOK_BACK
+    since = Date.today() - Duration(LOOK_BACK)
 
     if not config.analysis.interesting:
         Log.alert("Expecting config file to have `analysis.interesting` with a json expression.  All series are included.")
