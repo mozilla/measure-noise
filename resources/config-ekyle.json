@@ -1,5 +1,7 @@
 {
     "$ref": "../config.json",
     "database.$ref": "~/private.json#treeherder",
-    "deviant_summary.account_info.$ref": "file:///e:/moz-fx-dev-ekyle-treeherder-a838a7718652.json"
+    "deviant_summary.account_info.$ref": "file:///e:/moz-fx-dev-ekyle-treeherder-a838a7718652.json",
+    "constants.measure_noise.analysis.SCATTER_RANGE": "month",
+    "constants.measure_noise.analysis.TREEHERDER_RANGE": "90day"
 }
