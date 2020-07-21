@@ -33,11 +33,29 @@ The `deviance()` method will return a `(description, score)` pair describing how
 
 ## Development
 
+For Linux/OSX
+
     git clone https://github.com/mozilla/measure-noise.git
     cd measure-noise
+    python -m venv .venv      
+    source .venv/bin/activate
     pip install -r requirements.txt
     pip install -r tests/requirements.txt
+    export PYTHONPATH=.:vendor
     python -m unittest discover tests 
+
+Similar for Windows:
+
+    git clone https://github.com/mozilla/measure-noise.git
+    cd measure-noise
+    python -m pip install virtualenv  # venv is buggy on Windows
+    python -m virtualenv .venv 
+    .venv\Scripts\activate
+    pip install -r requirements.txt
+    pip install -r tests\requirements.txt
+    set PYTHONPATH=.;vendor
+    python -m unittest discover tests 
+
 
 ---------------------
 
@@ -63,14 +81,23 @@ You may make your own copy of the `config.json` with references to wherever your
 
 ## Running Analysis
 
-Run with the config parameter 
+Ensure you are in the main project directory, and point to your config file 
 
-    analysis.py --config=resources/kyle_config.json
+**Linux/OSX**
+
+    export PYTHONPATH=.:vendor
+    python measure_noise/analysis.py --config=resources/kyle_config.json
+
+**Windows**
+
+    set PYTHONPATH=.;vendor
+    python measure_noise\analysis.py --config=resources\kyle_config.json
+
 
 Some other options are 
 
 * `--id` - show specific signature_ids
-* `--now` - Do not update local database, just show worst series right now
+* `--download=<filename>` - Download all deviant statistics to file
 * `--deviant=<int>` - Show number of series with most deviant noise 
 * `--outliers=<int>` - Show number of series with most outliers noise 
 * `--modal=<int>` - Show number of series that seem bi-modal 

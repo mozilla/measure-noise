@@ -5,21 +5,22 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http:# mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_python import jx
-from jx_sqlite import ColumnMapping, _make_column_name, get_column, quoted_PARENT, quoted_UID, sql_aggs, PARENT, UID
+from jx_sqlite.utils import ColumnMapping, _make_column_name, get_column, sql_aggs, PARENT, UID
 from jx_sqlite.edges_table import EdgesTable
-from jx_sqlite.expressions import sql_type_to_json_type, SQLang
+from jx_sqlite.expressions._utils import SQLang, sql_type_to_json_type
 from mo_dots import concat_field, join_field, listwrap, split_field, startswith_field
 from mo_future import unichr
 from mo_logs import Log
-from pyLibrary.sql import SQL_FROM, SQL_GROUPBY, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_NULL, SQL_ON, SQL_ONE, SQL_ORDERBY, SQL_SELECT, SQL_WHERE, sql_count, sql_iso, sql_list
-from pyLibrary.sql.sqlite import quote_column, sql_alias
+from jx_sqlite.sqlite import SQL_FROM, SQL_GROUPBY, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_NULL, SQL_ON, SQL_ONE, SQL_ORDERBY, \
+    SQL_SELECT, SQL_WHERE, sql_count, sql_iso, sql_list, SQL_EQ, sql_coalesce, SQL
+from jx_sqlite.sqlite import quote_column, sql_alias, sql_call, quote_value
 
 
 class GroupbyTable(EdgesTable):
@@ -44,7 +45,7 @@ class GroupbyTable(EdgesTable):
         for t in tables[1::]:
             from_sql += (
                 SQL_LEFT_JOIN + quote_column(concat_field(base_table, t.nest)) + " " + t.alias +
-                SQL_ON + quote_column(t.alias, PARENT) + " = " + quote_column(previous.alias, UID)
+                SQL_ON + quote_column(t.alias, PARENT) + SQL_EQ + quote_column(previous.alias, UID)
             )
 
         selects = []
@@ -81,10 +82,16 @@ class GroupbyTable(EdgesTable):
             if sql == 'NULL' and not select.value.var in schema.keys():
                 Log.error("No such column {{var}}", var=select.value.var)
 
+            # AGGREGATE
             if select.value == "." and select.aggregate == "count":
-                selects.append(sql_alias(sql_count(SQL_ONE) , select.name))
+                sql = sql_count(SQL_ONE)
             else:
-                selects.append(sql_alias(sql_aggs[select.aggregate] + sql_iso(sql), select.name))
+                sql = sql_call(sql_aggs[select.aggregate], sql)
+
+            if select.default != None:
+                sql = sql_coalesce([sql, quote_value(select.default)])
+
+            selects.append(sql_alias(sql, select.name))
 
             index_to_column[column_number] = ColumnMapping(
                 push_name=select.name,

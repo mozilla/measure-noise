@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
@@ -18,18 +18,31 @@ PY2 = sys.version_info[0] == 2
 PYPY = False
 try:
     import __pypy__ as _
-    PYPY=True
+
+    PYPY = True
 except Exception:
-    PYPY=False
+    PYPY = False
 
 
 none_type = type(None)
 boolean_type = type(True)
 
 if PY3:
+    try:
+        STDOUT = sys.stdout.buffer
+    except Exception as e:
+        # WE HOPE WHATEVER REPLACED sys.stdout CAN HANDLE BYTES IN UTF8
+        STDOUT = sys.stdout
+
+    try:
+        STDERR = sys.stderr.buffer
+    except Exception as e:
+        # WE HOPE WHATEVER REPLACED sys.stderr CAN HANDLE BYTES IN UTF8
+        STDERR = sys.stderr
+
     import itertools
-    import collections
-    from collections import Callable
+    from collections import OrderedDict, UserDict
+    from collections.abc import Callable, Iterable, Mapping, Set, MutableMapping
     from functools import cmp_to_key, reduce, update_wrapper
     from configparser import ConfigParser
     from itertools import zip_longest
@@ -40,7 +53,7 @@ if PY3:
     zip_longest = itertools.zip_longest
 
     text = str
-    text_type = str
+    text = str
     string_types = str
     binary_type = bytes
     integer_types = (int, )
@@ -57,7 +70,8 @@ if PY3:
         type(filter(lambda x: True, [])),
         type({}.items()),
         type({}.values()),
-        type(map(lambda: 0, []))
+        type(map(lambda: 0, iter([]))),
+        type(reversed([]))
     )
     unichr = chr
 
@@ -101,6 +115,15 @@ if PY3:
         except StopIteration:
             return None
 
+    def NEXT(_iter):
+        """
+        RETURN next() FUNCTION, DO NOT CALL
+        """
+        return _iter.__next__
+
+    def next(_iter):
+        return _iter.__next__()
+
     def is_text(t):
         return t.__class__ is str
 
@@ -118,11 +141,12 @@ if PY3:
         sort_keys=True   # <-- IMPORTANT!  sort_keys==True
     ).encode
 
-    UserDict = collections.UserDict
 
-else:
-    import collections
-    from collections import Callable
+else:  # PY2
+    STDOUT = sys.stdout
+    STDERR = sys.stderr
+
+    from collections import Callable, Iterable, Mapping, Set, MutableMapping, OrderedDict
     from functools import cmp_to_key, reduce, update_wrapper
 
     import __builtin__
@@ -135,7 +159,7 @@ else:
 
     reduce = __builtin__.reduce
     text = __builtin__.unicode
-    text_type = __builtin__.unicode
+    text = __builtin__.unicode
     string_types = (str, unicode)
     binary_type = str
     integer_types = (int, long)
@@ -144,7 +168,7 @@ else:
     unichr = __builtin__.unichr
 
     xrange = __builtin__.xrange
-    generator_types = (GeneratorType,)
+    generator_types = (GeneratorType, type(reversed([])))
     unichr = __builtin__.unichr
 
     round = __builtin__.round
@@ -188,6 +212,15 @@ else:
         except StopIteration:
             return None
 
+    def NEXT(_iter):
+        """
+        RETURN next() FUNCTION, DO NOT CALL
+        """
+        return _iter.next
+
+    def next(_iter):
+        return _iter.next()
+
     def is_text(t):
         return t.__class__ is unicode
 
@@ -208,7 +241,7 @@ else:
 
 
     # COPIED FROM Python's collections.UserDict (copied July 2018)
-    class UserDict(collections.MutableMapping):
+    class UserDict(MutableMapping):
 
         # Start by filling-out the abstract methods
         def __init__(*args, **kwargs):

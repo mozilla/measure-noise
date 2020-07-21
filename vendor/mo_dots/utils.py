@@ -4,27 +4,19 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
 
 import importlib
-import sys
 
-from mo_future import PY2, text
+from mo_future import STDOUT, STDERR
 
-OBJ = text("_obj")
-CLASS = text("__class__")
+OBJ = str("_obj")
+CLASS = str("__class__")
 
 _Log = None
-
-if PY2:
-    STDOUT = sys.stdout
-    STDERR = sys.stderr
-else:
-    STDOUT = sys.stdout.buffer
-    STDERR = sys.stderr.buffer
 
 
 def get_logger():
@@ -38,7 +30,6 @@ def get_logger():
         _Log = PoorLogger()
         _Log.warning("`pip install mo-logs` for better logging.", cause=e)
         return _Log
-
 
 
 def get_module(name):

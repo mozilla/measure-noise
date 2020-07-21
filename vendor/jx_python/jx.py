@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
@@ -17,20 +17,20 @@ from jx_base.query import QueryOp, _normalize_selects
 from jx_base.language import is_op, value_compare
 from jx_python import expressions as _expressions, flat_list, group_by
 from jx_python.containers.cube import Cube
+from jx_python.convert import list2table, list2cube
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.expression_compiler import compile_expression
-from jx_python.expressions import jx_expression_to_function
+from jx_python.expressions import jx_expression_to_function as get
 from jx_python.flat_list import PartFlatList
 from mo_collections.index import Index
 from mo_collections.unique_index import UniqueIndex
 import mo_dots
-from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, set_default, split_field, unwrap, wrap
+from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, set_default, split_field, unwrap, to_data, dict_to_data, list_to_data
 from mo_dots.objects import DataObject
 from mo_future import is_text, sort_using_cmp
 from mo_logs import Log
 import mo_math
 from mo_math import MIN, UNION
-from pyLibrary import convert
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
 # JSON QUERY EXPRESSION DOCUMENTATION: https://github.com/klahnakoski/jx/tree/master/docs
@@ -44,20 +44,13 @@ _merge_type = None
 _ = _expressions
 
 
-def get(expr):
-    """
-    RETURN FUNCTION FOR EXPRESSION
-    """
-    return jx_expression_to_function(expr)
-
-
 def run(query, container=Null):
     """
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
     if container == None:
-        container = wrap(query)["from"]
+        container = to_data(query)["from"]
         query_op = QueryOp.wrap(query, container=container, namespace=container.schema)
     else:
         query_op = QueryOp.wrap(query, container, container.namespace)
@@ -69,7 +62,7 @@ def run(query, container=Null):
     elif isinstance(container, Container):
         return container.query(query_op)
     elif is_many(container):
-        container = wrap(list(container))
+        container = to_data(list(container))
     elif isinstance(container, Cube):
         if is_aggs(query_op):
             return cube_aggs(container, query_op)
@@ -105,12 +98,12 @@ def run(query, container=Null):
 
     # AT THIS POINT frum IS IN LIST FORMAT, NOW PACKAGE RESULT
     if query_op.format == "cube":
-        container = convert.list2cube(container)
+        container = list2cube(container)
     elif query_op.format == "table":
-        container = convert.list2table(container)
+        container = list2table(container)
         container.meta.format = "table"
     else:
-        container = wrap({"meta": {"format": "list"}, "data": container})
+        container = dict_to_data({"meta": {"format": "list"}, "data": container})
 
     return container
 
@@ -295,7 +288,7 @@ def select(data, field_name):
         return select_one(data, field_name)
 
     if is_data(field_name):
-        field_name = wrap(field_name)
+        field_name = to_data(field_name)
         if field_name.value in ["*", "."]:
             return data
 
@@ -313,7 +306,7 @@ def select(data, field_name):
             flat_list._select1(data, path, 0, output)
             return output
     elif is_list(field_name):
-        keys = [_select_a_field(wrap(f)) for f in field_name]
+        keys = [_select_a_field(to_data(f)) for f in field_name]
         return _select(Data(), unwrap(data), keys, 0)
     else:
         keys = [_select_a_field(field_name)]
@@ -322,12 +315,12 @@ def select(data, field_name):
 
 def _select_a_field(field):
     if is_text(field):
-        return wrap({"name": field, "value": split_field(field)})
-    elif is_text(wrap(field).value):
-        field = wrap(field)
-        return wrap({"name": field.name, "value": split_field(field.value)})
+        return dict_to_data({"name": field, "value": split_field(field)})
+    elif is_text(to_data(field).value):
+        field = to_data(field)
+        return dict_to_data({"name": field.name, "value": split_field(field.value)})
     else:
-        return wrap({"name": field.name, "value": field.value})
+        return dict_to_data({"name": field.name, "value": field.value})
 
 
 def _select(template, data, fields, depth):
@@ -367,7 +360,7 @@ def _select_deep(v, field, depth, record):
     """
     if hasattr(field.value, "__call__"):
         try:
-            record[field.name] = field.value(wrap(v))
+            record[field.name] = field.value(to_data(v))
         except Exception as e:
             record[field.name] = None
         return 0, None
@@ -403,7 +396,7 @@ def _select_deep_meta(field, depth):
         try:
 
             def assign(source, destination):
-                destination[name] = field.value(wrap(source))
+                destination[name] = field.value(to_data(source))
                 return 0, None
 
             return assign
@@ -471,9 +464,9 @@ def _select_deep_meta(field, depth):
 def get_columns(data, leaves=False):
     # TODO Split this into two functions
     if not leaves:
-        return wrap([{"name": n} for n in UNION(set(d.keys()) for d in data)])
+        return list_to_data([{"name": n} for n in UNION(set(d.keys()) for d in data)])
     else:
-        return wrap(
+        return to_data(
             [
                 {"name": leaf}
                 for leaf in set(leaf for row in data for leaf, _ in row.leaves())
@@ -554,15 +547,18 @@ def sort(data, fieldnames=None, already_normalized=False):
         if data == None:
             return Null
 
-        if not fieldnames:
-            return wrap(sort_using_cmp(data, value_compare))
-
-        if already_normalized:
-            formal = fieldnames
+        if isinstance(fieldnames, int):
+            funcs = [(lambda t: t[fieldnames], 1)]
         else:
-            formal = query._normalize_sort(fieldnames)
+            if not fieldnames:
+                return to_data(sort_using_cmp(data, value_compare))
 
-        funcs = [(jx_expression_to_function(f.value), f.sort) for f in formal]
+            if already_normalized:
+                formal = fieldnames
+            else:
+                formal = query._normalize_sort(fieldnames)
+
+            funcs = [(get(f.value), f.sort) for f in formal]
 
         def comparer(left, right):
             for func, sort_ in funcs:
@@ -576,6 +572,8 @@ def sort(data, fieldnames=None, already_normalized=False):
 
         if is_list(data):
             output = FlatList([unwrap(d) for d in sort_using_cmp(data, cmp=comparer)])
+        elif is_text(data):
+            Log.error("Do not know how to handle")
         elif hasattr(data, "__iter__"):
             output = FlatList(
                 [unwrap(d) for d in sort_using_cmp(list(data), cmp=comparer)]
@@ -591,6 +589,35 @@ def sort(data, fieldnames=None, already_normalized=False):
 
 def count(values):
     return sum((1 if v != None else 0) for v in values)
+
+
+def slide(values, size):
+    """
+    RETURN A SLIDING SERIES OF WINDOWS OF size
+    """
+    if size == 2:
+        yield pairwise(values)
+        return
+
+    i = iter(values)
+
+    # FILL THE WINDOW
+    window = []
+    for _ in range(0, size):
+        try:
+            window.append(next(i))
+        except StopIteration:
+            # WINDOW IS BIGGER THAN values, EMIT EVERYTHING WE GOT
+            yield builtin_tuple(window)
+            return
+
+    # WE NOW HAVE A FULL WINDOW
+    window = builtin_tuple(window)
+    for t in i:
+        yield window
+        window = window[1:] + (t, )
+
+    yield window
 
 
 def pairwise(values):
@@ -620,9 +647,9 @@ def filter(data, where):
         return data.filter(where)
 
     if is_container(data):
-        temp = jx_expression_to_function(where)
-        dd = wrap(data)
-        return wrap([unwrap(d) for i, d in enumerate(data) if temp(wrap(d), i, dd)])
+        temp = get(where)
+        dd = to_data(data)
+        return list_to_data([unwrap(d) for i, d in enumerate(data) if temp(to_data(d), i, dd)])
     else:
         Log.error(
             "Do not know how to handle type {{type}}", type=data.__class__.__name__
@@ -632,9 +659,35 @@ def filter(data, where):
         return drill_filter(where, data)
     except Exception as _:
         # WOW!  THIS IS INEFFICIENT!
-        return wrap(
+        return to_data(
             [unwrap(d) for d in drill_filter(where, [DataObject(d) for d in data])]
         )
+
+
+def drill(data, path):
+    """
+    ITERATE THROUGH ALL OBJECTS FOUND ALONG path
+    :param data: SOME DATA, OR ITERABLE
+    :param path: DOT-DELIMITED PATH TO REACH INTO
+    :return:
+    """
+    def _drill(d, p):
+        if p:
+            if is_many(d):
+                for dd in d:
+                    for v in _drill(dd, p):
+                        yield v
+            else:
+                for v in _drill(listwrap(d[p[0]]), p[1:]):
+                    yield v
+        elif is_many(d):
+            for dd in d:
+                for v in _drill(dd, p):
+                    yield v
+        else:
+            yield d
+
+    return _drill(data, split_field(path))
 
 
 def drill_filter(esfilter, data):
@@ -690,7 +743,7 @@ def drill_filter(esfilter, data):
         if filter is FALSE:
             return False
 
-        filter = wrap(filter)
+        filter = to_data(filter)
 
         if filter["and"]:
             result = True
@@ -871,7 +924,7 @@ def drill_filter(esfilter, data):
     # OUTPUT
     for i, d in enumerate(data):
         if is_data(d):
-            main([], esfilter, wrap(d), 0)
+            main([], esfilter, to_data(d), 0)
         else:
             Log.error("filter is expecting a dict, not {{type}}", type=d.__class__)
 
@@ -907,7 +960,7 @@ def drill_filter(esfilter, data):
 
     if not max:
         # SIMPLE LIST AS RESULT
-        return wrap([unwrap(u[0]) for u in uniform_output])
+        return list_to_data([unwrap(u[0]) for u in uniform_output])
 
     return PartFlatList(primary_column[0:max], uniform_output)
 
@@ -951,7 +1004,7 @@ def window(data, param):
     edges = param.edges  # columns to gourp by
     where = param.where  # DO NOT CONSIDER THESE VALUES
     sortColumns = param.sort  # columns to sort by
-    calc_value = jx_expression_to_function(
+    calc_value = get(
         param.value
     )  # function that takes a record and returns a value (for aggregation)
     aggregate = param.aggregate  # WindowFunction to apply
@@ -1058,6 +1111,7 @@ def reverse(vals):
     # TODO: Test how to do this fastest
     if not hasattr(vals, "len"):
         vals = list(vals)
+
     l = len(vals)
     output = [None] * l
 
@@ -1065,7 +1119,7 @@ def reverse(vals):
         l -= 1
         output[l] = v
 
-    return wrap(output)
+    return to_data(output)
 
 
 def countdown(vals):

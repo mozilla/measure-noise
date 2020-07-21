@@ -5,17 +5,17 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http:# mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
 import jx_base
-from jx_base import Column, Table
+from jx_base import Column, Table, jx_expression
 from jx_base.meta_columns import META_COLUMNS_DESC, META_COLUMNS_NAME, SIMPLE_METADATA_COLUMNS
 from jx_base.schema import Schema
 from jx_python import jx
-from jx_sqlite import untyped_column
-from jx_sqlite.expressions import sql_type_to_json_type
+from jx_sqlite.utils import untyped_column
+from jx_sqlite.expressions._utils import sql_type_to_json_type
 from mo_dots import Data, Null, coalesce, is_data, is_list, literal_field, startswith_field, tail_field, unwraplist, \
     wrap
 from mo_json import STRUCT, IS_NULL
@@ -23,8 +23,7 @@ from mo_json.typed_encoder import unnest_path, untyped
 from mo_logs import Log
 from mo_threads import Lock, Queue
 from mo_times.dates import Date
-from pyLibrary.sql import SQL_STAR
-from pyLibrary.sql.sqlite import sql_query
+from jx_sqlite.sqlite import sql_query
 
 DEBUG = False
 singlton = None
@@ -381,7 +380,7 @@ class ColumnList(jx_base.Table, jx_base.Container):
             output = [
                 {
                     "table": c.es_index,
-                    "name": untyped_column(c.name),
+                    "name": untyped_column(c.name)[0],
                     "cardinality": c.cardinality,
                     "es_column": c.es_column,
                     "es_index": c.es_index,

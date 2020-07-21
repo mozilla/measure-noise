@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -33,6 +33,9 @@ func(None, *kwargs)) == None
 """
 
 math_abs = __builtin__.abs
+
+
+INFINITY = float("+inf")
 
 
 def bayesian_add(*args):
@@ -120,7 +123,7 @@ def is_nan(s):
 def is_finite(s):
     try:
         f = float(s)
-        if math_abs(f) == float("+inf"):
+        if math_isnan(f) or math_abs(f) == INFINITY:
             return False
         return True
     except Exception:

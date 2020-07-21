@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -13,7 +13,7 @@ from datetime import date, datetime
 import sys
 
 from jx_python import jx
-from mo_dots import coalesce, listwrap, set_default, wrap, is_data, is_sequence
+from mo_dots import coalesce, listwrap, set_default, to_data, is_data, is_sequence
 from mo_future import number_types, text, is_text, is_binary
 from mo_json import datetime2unix, json2value, value2json
 from mo_kwargs import override
@@ -25,12 +25,12 @@ from mo_threads import Queue, THREAD_STOP, Thread, Till
 from mo_times import Duration, MINUTE
 from mo_times.dates import datetime2unix
 from pyLibrary.convert import bytes2base64
-from pyLibrary.env.rollover_index import RolloverIndex
+from jx_elasticsearch.rollover_index import RolloverIndex
 
 MAX_BAD_COUNT = 5
 LOG_STRING_LENGTH = 2000
-PAUSE_AFTER_GOOD_INSERT = 1
-PAUSE_AFTER_BAD_INSERT = 60
+PAUSE_AFTER_GOOD_INSERT = 60
+PAUSE_AFTER_BAD_INSERT = 600
 
 
 class StructuredLogger_usingElasticSearch(StructuredLogger):
@@ -43,6 +43,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         type="log",
         queue_size=1000,
         batch_size=100,
+        refresh_interval="1second",
         kwargs=None,
     ):
         """
@@ -90,7 +91,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         bad_count = 0
         while not please_stop:
             try:
-                messages = wrap(self.queue.pop_all())
+                messages = to_data(self.queue.pop_all())
                 if not messages:
                     Till(seconds=PAUSE_AFTER_GOOD_INSERT).wait()
                     continue

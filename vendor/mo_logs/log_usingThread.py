@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 
@@ -29,9 +29,11 @@ class StructuredLogger_usingThread(StructuredLogger):
 
         def worker(logger, please_stop):
             try:
-                while not please_stop:
+                while True:
                     logs = self.queue.pop_all()
                     if not logs:
+                        if please_stop:
+                            break
                         (Till(seconds=1) | please_stop).wait()
                         continue
                     for log in logs:

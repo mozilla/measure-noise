@@ -2,5 +2,7 @@
 .idea
 .svn
 __pycache__
-/resources/pem/treeherder-prod-ro.cd3i3txkp6c6.us-east-1.rds.amazonaws.com
 /*.sqlite
+/.pem
+/deviant_stats.csv
+/.venv

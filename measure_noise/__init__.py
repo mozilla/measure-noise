@@ -1,9 +1,17 @@
-from __future__ import division, unicode_literals
-
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+from __future__ import absolute_import, division, unicode_literals
 
 from math import sqrt
 
-from numpy import log, mean, array, var
+from numpy import log, mean, array, std
 from scipy.stats import kurtosis, skew
 
 DEBUG = False
@@ -12,7 +20,7 @@ PROBLEM_THRESHOLD = 3  # NUMBER OF STANDARD DEVIATIONS BEFORE A PROBLEM IS HIGHL
 
 def moments(samples):
     data = array(samples)
-    return (len(data), mean(data), sqrt(var(data)), skew(data), kurtosis(data))
+    return len(data), mean(data), std(data), skew(data), kurtosis(data)
 
 
 def identity(v):
