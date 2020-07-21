@@ -32,7 +32,7 @@ from mo_future import text
 from mo_logs import Log, startup, constants
 from mo_math.stats import median
 from mo_threads import Queue, Thread
-from mo_times import MONTH, Date, Timer, Duration
+from mo_times import Date, Timer, Duration
 from mo_times.dates import parse
 from pyLibrary.convert import list2tab
 
@@ -40,7 +40,8 @@ IGNORE_TOP = 3  # WHEN CALCULATING NOISE OR DEVIANCE, IGNORE SOME EXTREME VALUES
 LOCAL_RETENTION = "3day"  # HOW LONG BEFORE WE REFRESH LOCAL DATABASE ENTRIES
 # WHEN COMPARING new AND old STEPS, THE NUMBER OF PUSHES TO CONSIDER THEM STILL EQUAL
 TOLERANCE = MIN_POINTS
-LOOK_BACK = 3 * MONTH
+SCATTER_RANGE = "3month"  # TIME RANGE TO SHOW IN SCATTER PLOT
+TREEHERDER_RANGE = "365day"  # TIME RANGE TO SHOW ON PERFHERDER
 DOWNLOAD_LIMIT = 100_000
 
 
@@ -106,7 +107,7 @@ def process(
     url = "https://treeherder.mozilla.org/perf.html#/graphs?" + value2url_param({
         "highlightAlerts": 1,
         "series": [sig.repository, sig.id, 1, coalesce(sig.framework_id, sig.framework)],
-        "timerange": 7776000,  # 3 months
+        "timerange": Duration(TREEHERDER_RANGE).seconds
     })
 
     Log.note("With {{title}}: {{url}}", title=title, url=url)
@@ -339,7 +340,7 @@ def show_sorted(
 
 
 def main():
-    since = Date.today() - Duration(LOOK_BACK)
+    since = Date.today() - Duration(SCATTER_RANGE)
 
     if not config.analysis.interesting:
         Log.alert("Expecting config file to have `analysis.interesting` with a json expression.  All series are included.")
