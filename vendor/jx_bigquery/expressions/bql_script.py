@@ -8,12 +8,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import FALSE, NULL, ONE, SQLScript as SQLScript_, TRUE, ZERO
-from jx_bigquery.expressions import _utils
 from jx_bigquery.expressions._utils import json_type_to_bq_type, BQLang, check
-from mo_dots import coalesce, wrap
-from mo_future import PY2, text
-from mo_json import _merge_order
-from mo_logs import Log
 from jx_bigquery.sql import (
     SQL,
     SQL_CASE,
@@ -25,6 +20,11 @@ from jx_bigquery.sql import (
     ConcatSQL,
     SQL_NOT,
 )
+from mo_dots import coalesce, wrap
+from mo_future import PY2, text
+from mo_future.exports import export
+from mo_json import _merge_order
+from mo_logs import Log
 
 
 class BQLScript(SQLScript_, SQL):
@@ -83,7 +83,7 @@ class BQLScript(SQLScript_, SQL):
                         SQL_CASE,
                         SQL_WHEN,
                         SQL_NOT,
-                        sql_iso(BQLang[self.miss].to_bq(self.schema)[0].sql.b),
+                        sql_iso(BQLang[self.miss].to_bq(self.schema)),
                         SQL_THEN,
                         self.expr,
                         SQL_END,
@@ -125,4 +125,4 @@ class BQLScript(SQLScript_, SQL):
             return False
 
 
-_utils.BQLScript = BQLScript
+export("jx_bigquery.expressions._utils", BQLScript)

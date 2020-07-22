@@ -31,7 +31,10 @@ def get_range(value):
     all_values = np.array(value)
     num_raw_samples = len(value)
     ignore = int(num_raw_samples / 20)
-    trimmed_segment = all_values[np.argsort(all_values)[ignore:-ignore]]
+    if not ignore:
+        trimmed_segment = all_values
+    else:
+        trimmed_segment = all_values[np.argsort(all_values)[ignore:-ignore]]
     t_min, t_max = np.min(trimmed_segment), np.max(trimmed_segment)
     # a_max = np.max(all_values)
 

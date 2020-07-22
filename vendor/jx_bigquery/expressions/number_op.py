@@ -9,31 +9,33 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+
+
 from jx_base.expressions import NumberOp as NumberOp_
 from jx_bigquery.expressions import _utils
 from jx_bigquery.expressions._utils import BQLang, check
-from mo_dots import wrap
-from jx_bigquery.sql import sql_coalesce
+from jx_bigquery.expressions.bql_script import BQLScript
+from jx_bigquery.sql import sql_call, ConcatSQL, SQL_AS, SQL_FLOAT64
+from mo_future.exports import export
+from mo_json import same_json_type, NUMBER
 
 
 class NumberOp(NumberOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
-        value = BQLang[self.term].to_bq(schema, not_null=True)
-        acc = []
-        for c in value:
-            for t, v in c.sql.items():
-                if t == "s":
-                    acc.append("CAST(" + v + " as FLOAT)")
-                else:
-                    acc.append(v)
+        value = BQLang[self.term].to_bq(schema)
 
-        if not acc:
-            return wrap([])
-        elif len(acc) == 1:
-            return wrap([{"name": ".", "sql": {"n": acc[0]}}])
+        if same_json_type(value.data_type, NUMBER):
+            return value
         else:
-            return wrap([{"name": ".", "sql": {"n": sql_coalesce(acc)}}])
+            return BQLScript(
+                data_type=NUMBER,
+                expr=sql_call("CAST", ConcatSQL(value, SQL_AS, SQL_FLOAT64)),
+                frum=self,
+                miss=self.missing(),
+                many=False,
+                schema=schema
+            )
 
 
-_utils.NumberOp = NumberOp
+export("jx_bigquery.expressions._utils", NumberOp)

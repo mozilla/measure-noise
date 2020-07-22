@@ -10,10 +10,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import OrOp as OrOp_
-from jx_bigquery.expressions import _utils
 from jx_bigquery.expressions._utils import BQLang, check
-from mo_dots import wrap
 from jx_bigquery.sql import SQL_OR, sql_iso, JoinSQL
+from mo_dots import wrap
+from mo_future.exports import export
 
 
 class OrOp(OrOp_):
@@ -37,4 +37,4 @@ class OrOp(OrOp_):
         )
 
 
-_utils.OrOp = OrOp
+export("jx_bigquery.expressions._utils", OrOp)

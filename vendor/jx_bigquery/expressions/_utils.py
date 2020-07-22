@@ -9,8 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.language import Language
-
 from jx_base.expressions import (
     FALSE,
     FalseOp,
@@ -19,10 +17,7 @@ from jx_base.expressions import (
     TrueOp,
     extend,
     TRUE)
-from mo_dots import wrap, FlatList, is_data
-from mo_future import decorate
-from mo_json import BOOLEAN, NESTED, OBJECT, STRING, NUMBER, IS_NULL
-from mo_logs import Log
+from jx_base.language import Language
 from jx_bigquery.sql import (
     SQL,
     SQL_FALSE,
@@ -35,8 +30,13 @@ from jx_bigquery.sql import (
     SQL_STAR,
     SQL_LT,
 )
+from mo_dots import wrap
+from mo_future import decorate
+from mo_future.exports import expect
+from mo_json import BOOLEAN, NESTED, OBJECT, STRING, NUMBER, IS_NULL
+from mo_logs import Log
 
-NumberOp, OrOp, BQLScript = [None] * 3
+NumberOp, OrOp, BQLScript = expect("NumberOp", "OrOp", "BQLScript")
 
 
 def check(func):
@@ -97,8 +97,8 @@ def to_bq(self, schema, not_null=False, boolean=False):
 
 def _inequality_to_bq(self, schema, not_null=False, boolean=False, many=True):
     op, identity = _sql_operators[self.op]
-    lhs = NumberOp(self.lhs).partial_eval().to_bq(schema, not_null=True)[0].sql.n
-    rhs = NumberOp(self.rhs).partial_eval().to_bq(schema, not_null=True)[0].sql.n
+    lhs = NumberOp(self.lhs).partial_eval().to_bq(schema, not_null=True)
+    rhs = NumberOp(self.rhs).partial_eval().to_bq(schema, not_null=True)
     sql = sql_iso(lhs) + op + sql_iso(rhs)
 
     output = BQLScript(

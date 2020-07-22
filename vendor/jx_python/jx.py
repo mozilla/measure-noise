@@ -28,6 +28,7 @@ import mo_dots
 from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, set_default, split_field, unwrap, to_data, dict_to_data, list_to_data
 from mo_dots.objects import DataObject
 from mo_future import is_text, sort_using_cmp
+from mo_future.exports import export
 from mo_logs import Log
 import mo_math
 from mo_math import MIN, UNION
@@ -626,7 +627,10 @@ def pairwise(values):
     RETURN [(a, b), (b, c), (c, d), ...]
     """
     i = iter(values)
-    a = next(i)
+    try:
+        a = next(i)
+    except StopIteration:
+        return
 
     for b in i:
         yield (a, b)
@@ -1128,3 +1132,6 @@ def countdown(vals):
 
 
 from jx_python.lists.aggs import is_aggs, list_aggs
+
+
+export("jx_base.container", run)

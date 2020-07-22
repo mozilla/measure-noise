@@ -10,14 +10,13 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions.not_op import NotOp
-
-from jx_base.expressions import expression
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
+from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
+from mo_future.exports import export
 from mo_json import BOOLEAN
 
 
@@ -61,4 +60,4 @@ class MissingOp(Expression):
             return output.partial_eval()
 
 
-expression.MissingOp = MissingOp
+export("jx_base.expressions.expression", MissingOp)
