@@ -459,6 +459,7 @@ def main():
         source=config.database,
         deviant_summary=deviant_summary,
         sort={"value": {"abs": "relative_noise"}, "sort": "desc"},
+        where={"gte": {"num_pushes": 30}},
         limit=config.args.noise,
     )
 
