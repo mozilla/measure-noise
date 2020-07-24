@@ -25,7 +25,7 @@ from measure_noise.extract_perf import get_signature, get_dataum
 from measure_noise.step_detector import find_segments, MAX_POINTS, MIN_POINTS
 from measure_noise.utils import assign_colors, histogram
 from mo_collections import left
-from mo_dots import Data, coalesce, unwrap, to_data
+from mo_dots import Data, coalesce, unwrap, to_data, listwrap
 from mo_files import File
 from mo_files.url import value2url_param
 from mo_future import text
@@ -277,7 +277,7 @@ def update_local_database(config, deviant_summary, candidates, since):
 
     limited_update = Queue("sigs")
     limited_update.extend(
-        left(needs_update, coalesce(config.analysis.download_limit, 100))
+        left(needs_update, coalesce(config.display.download_limit, 100))
     )
     Log.alert("Updating local database with {{num}} series", num=len(limited_update))
 
@@ -342,6 +342,8 @@ def show_sorted(
 def main():
     since = Date.today() - Duration(SCATTER_RANGE)
 
+    if config.database.host not in listwrap(config.analysis.expected_database_host):
+        Log.error("Expecting database to be one of {{expected}}", expected=config.analysis.expected_database_host)
     if not config.analysis.interesting:
         Log.alert("Expecting config file to have `analysis.interesting` with a json expression.  All series are included.")
 
