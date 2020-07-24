@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_mysql.mysql import quote_list, MySQL, quote_value
 from mo_dots import listwrap
 from mo_future import first
-from mo_logs.strings import expand_template
 from mo_sql import SQL
 
 
@@ -25,7 +24,7 @@ def get_all_signatures(db_config, sql):
         return db.query(sql)
 
 
-def get_signature(db_config, signature_hash, repository):
+def get_signature(db_config, signature_id, repository):
     db = MySQL(db_config)
     with db:
         return first(
@@ -68,15 +67,14 @@ def get_signature(db_config, signature_hash, repository):
                 LEFT JOIN
                    repository AS t6 ON t6.id = t1.repository_id
                 WHERE
-                    t1.signature_hash IN {quote_list(listwrap(signature_hash))} AND t6.name={quote_value(repository)}
+                    t1.id in {quote_list(listwrap(signature_id))} AND t6.name={quote_value(repository)}
                 ORDER BY 
                     t1.last_updated DESC
-                """
-            )
+            """)
         )
 
 
-def get_dataum(db_config, signature_id, since):
+def get_dataum(db_config, signature_id, since, limit):
     db = MySQL(db_config)
     with db:
         return db.query(
@@ -134,9 +132,11 @@ def get_dataum(db_config, signature_id, since):
             a.manually_created=0
         WHERE
             p.time > {quote_value(since)} AND
-            d.signature_id = {quote_value(signature_id)}
+            d.signature_id in {quote_list(listwrap(signature_id))}
         ORDER BY
             p.time DESC
+        LIMIT
+            {quote_value(limit + 1)}
         """
             )
         )
