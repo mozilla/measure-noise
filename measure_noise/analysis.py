@@ -375,19 +375,18 @@ def main():
 
         # GET ALL KNOWN SERIES
         docs = list(
-            deviant_summary.sql_query(
-                f"""
-            SELECT * EXCEPT (_rank, values) 
-            FROM (
-              SELECT 
-                *, 
-                row_number() over (partition by id order by last_updated desc) as _rank 
-              FROM  
-                {quote_column(deviant_summary.full_name)}
-              ) a 
-            WHERE _rank=1 and {sql_iso(where_clause)}
-            LIMIT {quote_value(DOWNLOAD_LIMIT)}
-        """
+            deviant_summary.sql_query(f"""
+                SELECT * EXCEPT (_rank, values) 
+                FROM (
+                  SELECT 
+                    *, 
+                    row_number() over (partition by id order by last_updated desc) as _rank 
+                  FROM  
+                    {quote_column(deviant_summary.full_name)}
+                  ) a 
+                WHERE _rank=1 and {sql_iso(where_clause)}
+                LIMIT {quote_value(DOWNLOAD_LIMIT)}
+            """
             )
         )
         if len(docs) == DOWNLOAD_LIMIT:
