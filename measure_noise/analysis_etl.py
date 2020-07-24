@@ -15,13 +15,13 @@ from jx_python import jx
 from measure_noise import deviance
 from measure_noise.extract_perf import get_signature, get_dataum
 from measure_noise.step_detector import find_segments
-from mo_dots import Data
+from mo_dots import Data, unwrap
 from mo_json import NUMBER, python_type_to_json_type, scrub
 from mo_logs import Log
-from mo_times import Timer, Date, MONTH
+from mo_math.stats import median
+from mo_times import Timer, Date
 
 LIMIT = 5000
-LOOK_BACK = 6 * MONTH
 
 # REGISTER float64
 python_type_to_json_type[np.float64] = NUMBER
@@ -48,8 +48,6 @@ def process(
     # GET SIGNATURE DETAILS
     pushes = get_dataum(source, sig_id, since, LIMIT)
 
-    min_date = (Date.today() - LOOK_BACK).unix
-    from mo_math.stats import median
     pushes = jx.sort(
         [
             {
@@ -57,8 +55,8 @@ def process(
                 "runs": rows,
                 "push": {"time": unwrap(t)["push.time"]},
             }
-            for t, rows in jx.groupby(data, "push.time")
-            if t["push\\.time"] > min_date
+            for t, rows in jx.groupby(pushes, "push.time")
+            if t["push\\.time"] > since
         ],
         "push.time",
     )
@@ -136,4 +134,3 @@ def process(
         )
         | scrub(sig)
     )
-
