@@ -22,7 +22,7 @@ from jx_bigquery.sql import (
 )
 from mo_dots import coalesce, wrap
 from mo_future import PY2, text
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import _merge_order
 from mo_logs import Log
 

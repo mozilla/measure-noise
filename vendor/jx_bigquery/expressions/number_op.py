@@ -16,7 +16,7 @@ from jx_bigquery.expressions import _utils
 from jx_bigquery.expressions._utils import BQLang, check
 from jx_bigquery.expressions.bql_script import BQLScript
 from jx_bigquery.sql import sql_call, ConcatSQL, SQL_AS, SQL_FLOAT64
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import same_json_type, NUMBER
 
 

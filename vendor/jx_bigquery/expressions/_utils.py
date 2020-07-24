@@ -32,7 +32,7 @@ from jx_bigquery.sql import (
 )
 from mo_dots import wrap
 from mo_future import decorate
-from mo_future.exports import expect
+from mo_imports import expect
 from mo_json import BOOLEAN, NESTED, OBJECT, STRING, NUMBER, IS_NULL
 from mo_logs import Log
 

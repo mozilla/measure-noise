@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.expressions._utils import simplified, TRUE
+
 from mo_logs import Log
 
 from mo_dots import startswith_field
@@ -33,14 +35,14 @@ class InnerJoinOp(Expression):
         self.nests = nests
         last = "."
         for n in reversed(nests):
-            path = n.path
+            path = n.path.var
             if not startswith_field(path, last):
                 Log.error("Expecting nests to be reverse nested order")
             last = path
 
     def __data__(self):
         return {
-            "outerjoin": {
+            "innerjoin": {
                 "from": self.frum.__data__(),
                 "nests": [n.__data__() for n in self.nests],
             }
@@ -69,6 +71,9 @@ class InnerJoinOp(Expression):
         return self.missing()
 
     def missing(self):
+        if not self.nests:
+            return TRUE
+
         return OrOp(
             [self.frum.missing()] + [n.missing() for n in self.nests]
         ).partial_eval()
@@ -76,3 +81,10 @@ class InnerJoinOp(Expression):
     @property
     def many(self):
         return True
+
+    @simplified
+    def partial_eval(self):
+        return self.lang[InnerJoinOp(
+            frum=self.frum,
+            nests=[n.partial_eval() for n in self.nests],
+        )]

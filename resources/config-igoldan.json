@@ -5,7 +5,7 @@
             "pem": "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
         },
         "$ref": "~/private.json#treeherder",
-        "debug": false,
+        "debug": false
     },
     "deviant_summary": {
         "account_info": {
@@ -17,29 +17,31 @@
             "id": "string",
             "push.id": "integer",
             "push.date": "time",
-            "last_updated": "time",
+            "last_updated": "time"
         },
         "top_level_fields": {"id": "id", "last_updated": "last_updated"},
         "partition": {"field": "last_updated", "expire": "1year"},
         "id": {"field": "id", "version": "last_updated"},
         "cluster": ["id"],
-        "sharded": true,
+        "sharded": true
+    },
+    "display": {
+        "download_limit": 10
     },
     "analysis": {
-        "download_limit": 10,
         "interesting": {
             "and": [
                 {"in": {"repository": ["mozilla-beta", "autoland"]}},
                 {"not": {"in": {"framework": ["build_metrics", "vcs"]}}},
-                {"not": {"prefix": {"application": "chrome"}}},
+                {"not": {"prefix": {"application": "chrome"}}}
             ]
-        },
+        }
     },
     "constants": {
         "mo_http.http.default_headers": {
             "Referer": "https://github.com/mozilla/measure-noise"
         },
-        "measure_noise.step_detector.SHOW_CHARTS": false,
+        "measure_noise.step_detector.SHOW_CHARTS": false
     },
-    "debug": {"trace": true, "cprofile": false},
+    "debug": {"trace": true, "cprofile": false}
 }

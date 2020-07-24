@@ -15,7 +15,7 @@ from copy import deepcopy
 from mo_dots.utils import CLASS
 
 from mo_future import generator_types, first
-from mo_future.exports import expect
+from mo_imports import expect
 
 Log = None
 datawrap, coalesce, to_data, from_data, Null = expect("datawrap", "coalesce", "to_data", "from_data", "Null")
@@ -46,8 +46,6 @@ class FlatList(object):
     ENCAPSULATES FLAT SLICES ([::]) FOR USE IN WINDOW FUNCTIONS
     https://github.com/klahnakoski/mo-dots/tree/dev/docs#flatlist-is-flat
     """
-
-    EMPTY = None
 
     def __init__(self, vals=None):
         """ USE THE vals, NOT A COPY """
@@ -264,7 +262,7 @@ class FlatList(object):
         if num == None:
             return self
         if num <= 0:
-            return EMPTY
+            return Null
 
         return FlatList(_get_list(self)[:-num:])
 
@@ -315,8 +313,6 @@ def last(values):
 
     return values
 
-
-EMPTY = Null
 
 list_types = (list, FlatList)
 container_types = (list, FlatList, set)
