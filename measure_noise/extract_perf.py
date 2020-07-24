@@ -24,7 +24,7 @@ def get_all_signatures(db_config, sql):
         return db.query(sql)
 
 
-def get_signature(db_config, signature_id, repository):
+def get_signature(db_config, signature_id):
     db = MySQL(db_config)
     with db:
         return first(
@@ -67,7 +67,7 @@ def get_signature(db_config, signature_id, repository):
                 LEFT JOIN
                    repository AS t6 ON t6.id = t1.repository_id
                 WHERE
-                    t1.id in {quote_list(listwrap(signature_id))} AND t6.name={quote_value(repository)}
+                    t1.id in {quote_list(listwrap(signature_id))}
                 ORDER BY 
                     t1.last_updated DESC
             """)

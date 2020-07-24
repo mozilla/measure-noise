@@ -64,12 +64,12 @@ def process(
     :param show_distribution:
     :return:
     """
-    signature_hash = about_deviant.id
-    if not mo_math.is_hex(signature_hash):
-        Log.error("expecting hexidecimal hash")
+    sig_id = about_deviant.id
+    if not isinstance(sig_id, int):
+        Log.error("expecting id")
 
     # GET SIGNATURE DETAILS
-    sig = get_signature(db_config=source, signature_hash=signature_hash, repository=about_deviant.repository)
+    sig = get_signature(db_config=source, signature_id=sig_id)
 
     # GET SIGNATURE DETAILS
     data = get_dataum(source, sig.id, since=since)
@@ -213,7 +213,7 @@ def process(
     deviant_summary.upsert(
         where={"eq": {"id": sig.id}},
         doc=Data(
-            id=signature_hash,
+            id=sig_id,
             title=title,
             num_pushes=len(values),
             num_segments=len(new_segments) - 1,
