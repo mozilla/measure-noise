@@ -12,9 +12,9 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import PrefixOp as PrefixOp_, FALSE
 from jx_bigquery.expressions._utils import check, BQLang
 from jx_bigquery.expressions.bql_script import BQLScript
-from jx_bigquery.sql import sql_call
+from jx_bigquery.sql import SQL_TRUE, ConcatSQL
+from jx_bigquery.sql import sql_call, SQL_AND, SQL_IS_NOT_NULL, sql_iso
 from mo_json import BOOLEAN
-from jx_bigquery.sql import SQL_TRUE, ConcatSQL, SQL_ONE, SQL_EQ
 
 
 class PrefixOp(PrefixOp_):
@@ -32,7 +32,7 @@ class PrefixOp(PrefixOp_):
             expr = BQLang[self.expr].to_bq(schema)
             prefix = BQLang[self.prefix].to_bq(schema)
             return BQLScript(
-                expr=sql_call("STARTS_WITH", expr, prefix),
+                expr=ConcatSQL(sql_iso(expr), SQL_IS_NOT_NULL, SQL_AND, sql_call("STARTS_WITH", expr, prefix)),
                 data_type=BOOLEAN,
                 frum=self,
                 miss=FALSE,

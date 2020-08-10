@@ -203,6 +203,8 @@ def url_param2value(param):
         for v in vs.split(","):
             output = []
             i = 0
+            # WE MUST TRACK THE STATE OF UTF* DECODING, IF ILLEGITIMATE ENCODING
+            # THEN ASSUME LATIN1
             utf_remaining = 0
             start = 0
             while i < len(v):
@@ -212,8 +214,8 @@ def url_param2value(param):
                         try:
                             hex = v[i + 1 : i + 3]
                             if hex.strip() == hex:
-                                d = int(v[i + 1: i + 3], 16)
-                                if d & 0xC0 == 0x80:  # 10XX xxxx
+                                d = int(v[i + 1 : i + 3], 16)
+                                if d & 0xC0 == 0x80:  # 10XX XXXX
                                     utf_remaining -= 1
                                     b = bytes([d])
                                     output.append(b)
@@ -221,7 +223,7 @@ def url_param2value(param):
                                     continue
                         except Exception:
                             pass
-                    # missing continuation byte, try again
+                    # missing continuation byte (# 10XX XXXX), try again
                     output = output[:-utf_remaining]
                     utf_remaining = 0
                     i = start
@@ -233,20 +235,20 @@ def url_param2value(param):
                         i += 1
                     elif c == "%":
                         try:
-                            hex = v[i + 1 : i + 3]
-                            if hex.strip() != hex:
+                            hex_pair = v[i + 1 : i + 3]
+                            if hex_pair.strip() != hex_pair:
                                 output.append(b"%")
                                 i += 1
                                 continue
 
-                            d = int(v[i + 1: i + 3], 16)
-                            if d & 0xE0 == 0xC0:  # 110X xxxx
+                            d = int(hex_pair, 16)
+                            if d & 0xE0 == 0xC0:  # 110X XXXX
                                 utf_remaining = 1
                                 start = i
                                 b = bytes([d])
                                 output.append(b)
                                 i += 3
-                            elif d & 0xF0 == 0xE0:  # 1110 xxxx
+                            elif d & 0xF0 == 0xE0:  # 1110 XXXX
                                 utf_remaining = 2
                                 start = i
                                 b = bytes([d])
@@ -272,7 +274,8 @@ def url_param2value(param):
                         try:
                             output.append(c.encode("latin1"))
                         except Exception:
-                            output.append(c.encode('utf8'))
+                            # WE EXPECT BYTES, BUT SOMEONE WILL GIVE US UNICODE STRINGS
+                            output.append(c.encode("utf8"))
                         i += 1
 
             if utf_remaining:

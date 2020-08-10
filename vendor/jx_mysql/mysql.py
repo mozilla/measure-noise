@@ -12,22 +12,24 @@ import subprocess
 from datetime import datetime
 from urllib.parse import unquote
 
-from pymysql import connect, cursors
-
 from jx_python import jx
 from mo_dots import coalesce, is_data, listwrap, unwrap, wrap, Data
 from mo_files import File, URL
-from mo_future import is_binary, text, transpose, utf8_json_encoder, first
+from mo_future import is_binary, is_text, text, transpose, utf8_json_encoder, first
 from mo_http import http
 from mo_json import TIME, scrub, INTEGER, STRING, NUMBER, INTERVAL
 from mo_kwargs import override
-from mo_logs import Except, suppress_exception, strings
+from mo_logs import Log, Except, suppress_exception, strings
 from mo_logs.strings import expand_template, indent, outdent
 from mo_math import is_number
-from mo_sql import *
+from mo_sql import SQL, SQL_AND, SQL_ASC, SQL_DESC, SQL_FROM, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_LIMIT, SQL_NULL, \
+    SQL_ONE, SQL_SELECT, SQL_TRUE, SQL_WHERE, sql_iso, sql_list, SQL_INSERT, SQL_VALUES, ConcatSQL, SQL_EQ, \
+    SQL_UPDATE, SQL_SET, JoinSQL, SQL_DOT, SQL_AS, SQL_COMMA, SQL_STAR, SQL_ORDERBY, SQL_OR, SQL_NOT, SQL_IS_NOT_NULL, \
+    SQL_GT
 from mo_times import Date, DAY
 from pyLibrary import convert
 from pyLibrary.meta import cache
+from pymysql import connect, cursors
 
 DEBUG = False
 MAX_BATCH_SIZE = 1

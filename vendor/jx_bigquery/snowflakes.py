@@ -29,7 +29,7 @@ from mo_json import NESTED, STRUCT, OBJECT, STRING, NUMBER
 from mo_logs import Log, Except
 from mo_times.dates import Date
 
-DEBUG = True
+DEBUG = False
 
 
 class Snowflake(jx_base.Snowflake):

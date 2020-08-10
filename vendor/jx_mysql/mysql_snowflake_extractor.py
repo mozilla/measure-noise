@@ -15,26 +15,6 @@ from __future__ import unicode_literals
 from copy import deepcopy, copy
 
 from jx_mysql.mysql import MySQL, quote_column, sql_alias
-from jx_mysql.mysql import (
-    SQL_SELECT,
-    sql_list,
-    SQL_NULL,
-    sql_iso,
-    SQL_FROM,
-    SQL_INNER_JOIN,
-    SQL_LEFT_JOIN,
-    SQL_ON,
-    SQL_UNION_ALL,
-    SQL_ORDERBY,
-    SQL_STAR,
-    SQL_IS_NOT_NULL,
-    SQL,
-    SQL_AND,
-    SQL_EQ,
-    ConcatSQL,
-    SQL_LIMIT,
-    SQL_ONE,
-)
 from jx_python import jx
 from mo_collections import UniqueIndex
 from mo_dots import (
@@ -58,6 +38,26 @@ from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Explanation
 from mo_math.randoms import Random
+from mo_sql import (
+    SQL_SELECT,
+    sql_list,
+    SQL_NULL,
+    sql_iso,
+    SQL_FROM,
+    SQL_INNER_JOIN,
+    SQL_LEFT_JOIN,
+    SQL_ON,
+    SQL_UNION_ALL,
+    SQL_ORDERBY,
+    SQL_STAR,
+    SQL_IS_NOT_NULL,
+    SQL,
+    SQL_AND,
+    SQL_EQ,
+    ConcatSQL,
+    SQL_LIMIT,
+    SQL_ONE,
+)
 from mo_times import Timer
 
 DEBUG = False
@@ -87,11 +87,19 @@ class MySqlSnowflakeExtractor(object):
         with Explanation("scan database", debug=DEBUG):
             self.db = MySQL(**kwargs.database)
             self.settings.database.schema = self.db.settings.schema
-            with self.db:
-                with self.db.transaction():
-                    self._scan_database()
+            with self.db.transaction():
+                self._scan_database()
         if not self.settings.database.schema:
             Log.error("you must provide a `database.schema`")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
+        self.db.close()
 
     def get_sql(self, get_ids):
         sql = self._compose_sql(get_ids)
@@ -886,12 +894,12 @@ class MySqlSnowflakeExtractor(object):
         doc_count = 0
 
         columns = tuple(wrap(c) for c in self.columns)
-        with Timer("Downloading from MySQL"):
+        with Timer("Downloading from MySQL", verbose=DEBUG):
             curr_doc = Null
             row_count = 0
             if DEBUG:
                 cursor = list(cursor)
-                Log.note("{{data|json}}", data=cursor)
+                Log.note("{{data|json|limit(1000)}}", data=cursor)
             for row in cursor:
                 row_count += 1
                 if please_stop:

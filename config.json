@@ -20,10 +20,6 @@
             "id": "id",
             "last_updated": "last_updated"
         },
-        "partition": {
-            "field": "last_updated",
-            "expire": "1year"
-        },
         "id": {
             "field": "id",
             "version": "last_updated"
@@ -33,11 +29,14 @@
         ],
         "sharded": true
     },
+    "display": {
+        "download_limit": 10
+    },
     "analysis": {
-        "download_limit": 10,
+        "expected_database_host": "treeherder-prod-ro.cd3i3txkp6c6.us-east-1.rds.amazonaws.com",
         "interesting": {"and": [
             {"in": {"repository":["mozilla-beta", "autoland"]}},
-            {"not": {"in": {"framework": ["build_metrics", "vcs"]}}},
+            {"in": {"framework": ["talos", "raptor", "awsy", "browsertime"]}},
             {"not": {"prefix": {"application": "chrome"}}}
         ]}
     },

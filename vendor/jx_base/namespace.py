@@ -58,4 +58,3 @@ def convert_list(operator, operand):
     else:
         return list(map(operator, operand))
 
-

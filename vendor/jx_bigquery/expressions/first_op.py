@@ -17,9 +17,8 @@ from mo_logs import Log
 class FirstOp(FirstOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
-        value = BQLang[self.term].to_bq(schema, not_null=True)
-        for c in value:
-            for t, v in c.sql.items():
-                if t == "j":
-                    Log.error("can not handle")
-        return value
+        value = BQLang[self.term].to_bq(schema)
+        if value.many:
+            Log.error("can not handle")
+        else:
+            return value

@@ -12,15 +12,16 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import AbsOp as AbsOp_
 from jx_bigquery.expressions._utils import BQLang, check
 from jx_bigquery.expressions.bql_script import BQLScript
+from jx_bigquery.sql import sql_call
 from mo_json import NUMBER
 
 
 class AbsOp(AbsOp_):
     @check
     def to_bq(self, schema, not_null=False, boolean=False):
-        expr = BQLang[self.term].partial_eval().to_bq(schema)[0].sql.n
+        expr = BQLang[self.term].partial_eval().to_bq(schema)
         return BQLScript(
-            expr="ABS(" + expr + ")",
+            expr=sql_call("ABS", expr),
             data_type=NUMBER,
             frum=self,
             miss=self.missing(),

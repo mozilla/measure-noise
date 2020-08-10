@@ -21,6 +21,7 @@ from mo_times import Date, Duration
 
 SQL_TRUE = SQL(" TRUE ")
 SQL_FALSE = SQL(" FALSE ")
+SQL_FLOAT64 = SQL(" FLOAT64 ")
 TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 ALLOWED = string.ascii_letters + string.digits
 GUID = "_id"  # user accessible, unique value across many machines
@@ -188,19 +189,21 @@ def sql_query(query, schema=None):
     query = wrap(query)
 
     acc = [SQL_SELECT]
-    
-    select = _normalize_select(query.select, query["from"], schema)
-    acc.append(
-        JoinSQL(
-            SQL_COMMA,
-            [
-                sql_alias(
-                    BQLang[jx_expression(s.value)].to_bq(schema), escape_name(s.name)
-                )
-                for s in select
-            ],
+    if not query.select:
+        acc.append(SQL_STAR)
+    else:
+        select = _normalize_select(query.select, query["from"], schema)
+        acc.append(
+            JoinSQL(
+                SQL_COMMA,
+                [
+                    sql_alias(
+                        BQLang[jx_expression(s.value)].to_bq(schema), escape_name(s.name)
+                    )
+                    for s in select
+                ],
+            )
         )
-    )
 
     acc.append(SQL_FROM)
     acc.append(quote_column(ApiName(*split_field(query["from"]))))

@@ -25,7 +25,7 @@ from measure_noise.extract_perf import get_signature, get_dataum
 from measure_noise.step_detector import find_segments, MAX_POINTS, MIN_POINTS
 from measure_noise.utils import assign_colors, histogram
 from mo_collections import left
-from mo_dots import Data, coalesce, unwrap, to_data
+from mo_dots import Data, coalesce, unwrap, to_data, listwrap
 from mo_files import File
 from mo_files.url import value2url_param
 from mo_future import text
@@ -64,15 +64,15 @@ def process(
     :param show_distribution:
     :return:
     """
-    signature_hash = about_deviant.id
-    if not mo_math.is_hex(signature_hash):
-        Log.error("expecting hexidecimal hash")
+    sig_id = about_deviant.id
+    if not isinstance(sig_id, int):
+        Log.error("expecting id")
 
     # GET SIGNATURE DETAILS
-    sig = get_signature(db_config=source, signature_hash=signature_hash, repository=about_deviant.repository)
+    sig = get_signature(db_config=source, signature_id=sig_id)
 
     # GET SIGNATURE DETAILS
-    data = get_dataum(source, sig.id, since=since)
+    data = get_dataum(source, sig.id, since=since, limit=show_limit)
 
     min_date = since.unix
     pushes = jx.sort(
@@ -213,7 +213,7 @@ def process(
     deviant_summary.upsert(
         where={"eq": {"id": sig.id}},
         doc=Data(
-            id=signature_hash,
+            id=sig_id,
             title=title,
             num_pushes=len(values),
             num_segments=len(new_segments) - 1,
@@ -277,7 +277,7 @@ def update_local_database(config, deviant_summary, candidates, since):
 
     limited_update = Queue("sigs")
     limited_update.extend(
-        left(needs_update, coalesce(config.analysis.download_limit, 100))
+        left(needs_update, coalesce(config.display.download_limit, 100))
     )
     Log.alert("Updating local database with {{num}} series", num=len(limited_update))
 
@@ -342,6 +342,8 @@ def show_sorted(
 def main():
     since = Date.today() - Duration(SCATTER_RANGE)
 
+    if config.database.host not in listwrap(config.analysis.expected_database_host):
+        Log.error("Expecting database to be one of {{expected}}", expected=config.analysis.expected_database_host)
     if not config.analysis.interesting:
         Log.alert("Expecting config file to have `analysis.interesting` with a json expression.  All series are included.")
 
@@ -373,19 +375,18 @@ def main():
 
         # GET ALL KNOWN SERIES
         docs = list(
-            deviant_summary.sql_query(
-                f"""
-            SELECT * EXCEPT (_rank, values) 
-            FROM (
-              SELECT 
-                *, 
-                row_number() over (partition by id order by last_updated desc) as _rank 
-              FROM  
-                {quote_column(deviant_summary.full_name)}
-              ) a 
-            WHERE _rank=1 and {sql_iso(where_clause)}
-            LIMIT {quote_value(DOWNLOAD_LIMIT)}
-        """
+            deviant_summary.sql_query(f"""
+                SELECT * EXCEPT (_rank, values) 
+                FROM (
+                  SELECT 
+                    *, 
+                    row_number() over (partition by id order by last_updated desc) as _rank 
+                  FROM  
+                    {quote_column(deviant_summary.full_name)}
+                  ) a 
+                WHERE _rank=1 and {sql_iso(where_clause)}
+                LIMIT {quote_value(DOWNLOAD_LIMIT)}
+            """
             )
         )
         if len(docs) == DOWNLOAD_LIMIT:
@@ -459,6 +460,7 @@ def main():
         source=config.database,
         deviant_summary=deviant_summary,
         sort={"value": {"abs": "relative_noise"}, "sort": "desc"},
+        where={"gte": {"num_pushes": 30}},
         limit=config.args.noise,
     )
 

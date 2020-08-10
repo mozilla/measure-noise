@@ -12,10 +12,14 @@ from __future__ import absolute_import, division, unicode_literals
 import types
 from copy import deepcopy
 
-from mo_future import generator_types, first
+from mo_dots.utils import CLASS
 
-from mo_dots import CLASS, coalesce, to_data, from_data
-from mo_dots.nones import Null
+from mo_future import generator_types, first
+from mo_imports import expect
+
+Log = None
+datawrap, coalesce, to_data, from_data, Null = expect("datawrap", "coalesce", "to_data", "from_data", "Null")
+
 
 _list = str("list")
 _get = object.__getattribute__
@@ -23,25 +27,17 @@ _set = object.__setattr__
 _emit_slice_warning = True
 
 
-Log, _datawrap = [None]*2
-
-
 def _get_list(self):
     return _get(self, _list)
 
 
 def _late_import():
-    global _datawrap
     global Log
-
-    from mo_dots.objects import datawrap as _datawrap
 
     try:
         from mo_logs import Log
     except Exception:
         from mo_dots.utils import PoorLogger as Log
-
-    _ = _datawrap
 
 
 class FlatList(object):
@@ -50,8 +46,6 @@ class FlatList(object):
     ENCAPSULATES FLAT SLICES ([::]) FOR USE IN WINDOW FUNCTIONS
     https://github.com/klahnakoski/mo-dots/tree/dev/docs#flatlist-is-flat
     """
-
-    EMPTY = None
 
     def __init__(self, vals=None):
         """ USE THE vals, NOT A COPY """
@@ -116,7 +110,7 @@ class FlatList(object):
 
         return FlatList(
             vals=[
-                from_data(coalesce(_datawrap(v), Null)[key])
+                from_data(coalesce(datawrap(v), Null)[key])
                 for v in _get_list(self)
             ]
         )
@@ -268,7 +262,7 @@ class FlatList(object):
         if num == None:
             return self
         if num <= 0:
-            return EMPTY
+            return Null
 
         return FlatList(_get_list(self)[:-num:])
 
@@ -320,14 +314,13 @@ def last(values):
     return values
 
 
-EMPTY = Null
-
 list_types = (list, FlatList)
 container_types = (list, FlatList, set)
 sequence_types = (list, FlatList, tuple) + generator_types
 many_types = tuple(set(list_types + container_types + sequence_types))
 
-not_many_names = ("str", "unicode", "binary", "NullType", "NoneType", "dict", "Data")  # ITERATORS THAT ARE CONSIDERED PRIMITIVE
+# ITERATORS THAT ARE CONSIDERED PRIMITIVE
+not_many_names = ("str", "unicode", "binary", "NullType", "NoneType", "dict", "Data")
 
 
 def is_list(l):
@@ -363,3 +356,5 @@ def is_many(value):
         Log.warning("is_many() can not detect generator {{type}}", type=type_.__name__)
         return True
     return False
+
+

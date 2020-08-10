@@ -10,32 +10,32 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import AndOp
+from jx_base.expressions import AndOp, FALSE
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.eq_op import EqOp
+from jx_base.expressions.es_select_op import ESSelectOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.literal import ZERO
 from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.null_op import NULL
 from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
-from jx_base.expressions.variable import IDENTITY
 from jx_base.language import is_op
 from mo_dots import Null, startswith_field, coalesce, listwrap
 from mo_json import BOOLEAN
 
-default_select = {"name":".", "value":IDENTITY},
+select_nothing = ESSelectOp()
 
 
-class EsNestedOp(Expression):
+class NestedOp(Expression):
     data_type = BOOLEAN
     has_simple_form = False
 
-    __slots__ = ["frum", "select", "where", "sort", "limit"]
+    __slots__ = ["path", "select", "where", "sort", "limit"]
 
-    def __init__(self, frum, select=default_select, where=TRUE, sort=Null, limit=NULL):
-        Expression.__init__(self, [frum, select, where, sort, limit])
-        self.frum = frum
+    def __init__(self, path, select=select_nothing, where=TRUE, sort=Null, limit=NULL):
+        Expression.__init__(self, [path, select, where])
+        self.path = path
         self.select = select
         self.where = where
         self.sort = sort
@@ -44,29 +44,31 @@ class EsNestedOp(Expression):
     @simplified
     def partial_eval(self):
         if self.missing() is TRUE:
-            return NULL
-
-        return self.lang[
-            EsNestedOp(
-                self.frum.partial_eval(),
-                self.select.partial_eval(),
-                self.where.partial_eval(),
-                self.sort.partial_eval(),
-                self.limit.partial_eval()
-            )
-        ]
+            return self.lang[
+                NestedOp(
+                    path=self.path.partial_eval(),
+                    where=FALSE
+                )
+            ]
+        return NestedOp(
+            self.path.partial_eval(),
+            self.select.partial_eval(),
+            self.where.partial_eval(),
+            self.sort.partial_eval(),
+            self.limit.partial_eval()
+        )
 
     def __and__(self, other):
         """
-        MERGE TWO  EsNestedOp
+        MERGE TWO  NestedOp
         """
-        if not is_op(other, EsNestedOp):
+        if not is_op(other, NestedOp):
             return AndOp([self, other])
 
         # MERGE
-        elif self.frum == other.frum:
-            return EsNestedOp(
-                self.frum,
+        elif self.path == other.frum:
+            return NestedOp(
+                self.path,
                 listwrap(self.select) + listwrap(other.select),
                 AndOp([self.where, other.where]),
                 coalesce(self.sort, other.sort),
@@ -74,10 +76,10 @@ class EsNestedOp(Expression):
             )
 
         # NEST
-        elif startswith_field(other.frum.var, self.frum.var):
+        elif startswith_field(other.frum.var, self.path.var):
             # WE ACHIEVE INTERSECTION BY LIMITING OURSELF TO ONLY THE DEEP OBJECTS
             # WE ASSUME frum SELECTS WHOLE DOCUMENT, SO self.select IS POSSIBLE
-            return EsNestedOp(
+            return NestedOp(
                 other,
                 self.select,
                 self.where,
@@ -85,8 +87,8 @@ class EsNestedOp(Expression):
                 self.limit,
             )
 
-        elif startswith_field(self.frum.var, other.frum.var):
-            return EsNestedOp(
+        elif startswith_field(self.path.var, other.frum.var):
+            return NestedOp(
                 self,
                 other.select,
                 other.where,
@@ -98,8 +100,8 @@ class EsNestedOp(Expression):
 
     def __data__(self):
         return {
-            "es.nested": {
-                "from": self.frum.__data__(),
+            "nested": {
+                "path": self.path.__data__(),
                 "select": self.select.__data__(),
                 "where": self.where.__data__(),
                 "sort": self.sort.__data__(),
@@ -109,8 +111,8 @@ class EsNestedOp(Expression):
 
     def __eq__(self, other):
         return (
-            is_op(other, EsNestedOp)
-            and self.frum == other.frum
+            is_op(other, NestedOp)
+            and self.path == other.path
             and self.select == other.select
             and self.where == other.where
             and self.sort == other.sort
@@ -119,7 +121,7 @@ class EsNestedOp(Expression):
 
     def vars(self):
         return (
-            self.frum.vars()
+            self.path.vars()
             | self.select.vars()
             | self.where.vars()
             | self.sort.vars()
@@ -127,8 +129,8 @@ class EsNestedOp(Expression):
         )
 
     def map(self, mapping):
-        return EsNestedOp(
-            frum=self.frum.map(mapping),
+        return NestedOp(
+            path=self.path.map(mapping),
             select=self.select.map(mapping),
             where=self.where.map(mapping),
             sort=self.sort.map(mapping),
@@ -141,7 +143,7 @@ class EsNestedOp(Expression):
     def missing(self):
         return OrOp([
             NotOp(self.where),
-            self.frum.missing(),
+            # self.path.missing(), ASSUME PATH TO TABLES, WHICH ASSUMED TO HAVE DATA (EXISTS)
             self.select.missing(),
             EqOp([self.limit,  ZERO])
          ]).partial_eval()
