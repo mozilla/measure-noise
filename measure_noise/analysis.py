@@ -72,7 +72,7 @@ def process(
     sig = get_signature(db_config=source, signature_id=sig_id)
 
     # GET SIGNATURE DETAILS
-    data = get_dataum(source, sig.id, since=since)
+    data = get_dataum(source, sig.id, since=since, limit=show_limit)
 
     min_date = since.unix
     pushes = jx.sort(
