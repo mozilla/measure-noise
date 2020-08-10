@@ -48,8 +48,8 @@ Similar for Windows:
 
     git clone https://github.com/mozilla/measure-noise.git
     cd measure-noise
-    c:\python37\python.exe -m pip install virtualenv  
-    c:\python37\python.exe -m virtualenv .venv 
+    python.exe -m pip install virtualenv  
+    python.exe -m virtualenv .venv 
     .venv\Scripts\activate
     pip install -r requirements.txt
     pip install -r tests\requirements.txt
@@ -61,7 +61,21 @@ Similar for Windows:
 
 ## Analysis Configuration
 
-The analysis requires a connection to a Treeherder database. The `config.json` file points to a `private.json` file with all the secrets:
+The analysis is controlled by the `config.json` file, but it is missing the secrets required to connect to the Treeherder RO database and BigQuery. You must provide references to secrets by making your own config file. 
+
+Please look at the existing `resources/<user>-config.json` files. You may make a copy of one, and update it with references to the secrets on your dev machine. For example, `resources/kyle-config.json` looks like
+
+```json
+{
+    "$ref": "../config.json",
+    "database.$ref": "~/private.json#treeherder",
+    "deviant_summary.account_info.$ref": "file:///e:/moz-fx-dev-ekyle-treeherder-a838a7718652.json",
+    "constants.measure_noise.analysis.SCATTER_RANGE": "month",
+    "constants.measure_noise.analysis.TREEHERDER_RANGE": "90day"
+}
+```
+
+You may be able to guess where each of my secrets are found on my machine. For example, I have a `private.json` file in my user directory. Here is an example of the contents:
 
 ```javascript
 // Example contents of ~/private.json
@@ -69,13 +83,13 @@ The analysis requires a connection to a Treeherder database. The `config.json` f
     "treeherder": {
         "host": "treeherder-prod-ro.cd3i3txkp6c6.us-east-1.rds.amazonaws.com",
         "port" : 3306,
-        "username": "activedata2",
+        "username": "username",
         "password": "password"
     }
 }
 ```
 
-You may make your own copy of the `config.json` with references to wherever your secrets are.  If you put it in `/resources`, then you may make a PR with it. Remember, **never put secrets in your project directory**; use references to secrets instead.   
+Feel free to add your `resources/<user>-config.json` file and make a PR with it. Remember, **never put secrets in your project directory**; use references to secrets instead.   
 
 > You may use `{"$ref":"env://MY_ENV_VARIABLE"}` to use environment variables. [More details](https://github.com/klahnakoski/mo-json-config#environment-variables-reference) 
 
@@ -86,7 +100,7 @@ Ensure you are in the main project directory, and point to your config file
 **Linux/OSX**
 
     export PYTHONPATH=.:vendor
-    python measure_noise/analysis.py --config=resources/kyle_config.json
+    python measure_noise/analysis.py --config=resources/<user>-config.json
 
 **Windows**
 
