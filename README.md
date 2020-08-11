@@ -63,7 +63,7 @@ Similar for Windows:
 
 The analysis is controlled by the `config.json` file, but it is missing the secrets required to connect to the Treeherder RO database and BigQuery. You must provide references to secrets by making your own config file. 
 
-Please look at the existing `resources/<user>-config.json` files. You may make a copy of one, and update it with references to the secrets on your dev machine. For example, `resources/kyle-config.json` looks like
+Please look at the existing `resources/config-<user>.json` files. You may make a copy of one, and update it with references to the secrets on your dev machine. For example, `resources/kyle-config.json` looks like
 
 ```json
 {
@@ -89,7 +89,7 @@ You may be able to guess where each of my secrets are found on my machine. For e
 }
 ```
 
-Feel free to add your `resources/<user>-config.json` file and make a PR with it. Remember, **never put secrets in your project directory**; use references to secrets instead.   
+Feel free to add your `resources/config-<user>.json` file and make a PR with it. Remember, **never put secrets in your project directory**; use references to secrets instead.   
 
 > You may use `{"$ref":"env://MY_ENV_VARIABLE"}` to use environment variables. [More details](https://github.com/klahnakoski/mo-json-config#environment-variables-reference) 
 
@@ -100,12 +100,12 @@ Ensure you are in the main project directory, and point to your config file
 **Linux/OSX**
 
     export PYTHONPATH=.:vendor
-    python measure_noise/analysis.py --config=resources/<user>-config.json
+    python measure_noise/analysis.py --config=resources/config-<user>.json
 
 **Windows**
 
     set PYTHONPATH=.;vendor
-    python measure_noise\analysis.py --config=resources\kyle_config.json
+    python measure_noise\analysis.py --config=resources\config-kyle.json
 
 
 Some other options are 
