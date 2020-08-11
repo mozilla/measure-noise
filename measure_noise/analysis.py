@@ -389,6 +389,7 @@ def main():
             """
             )
         )
+        Log.note("Downloaded {{num}} series", num=len(docs))
         if len(docs) == DOWNLOAD_LIMIT:
             Log.warning("Not all signatures downloaded")
         File(config.args.download).write(list2tab(docs, separator=","))
