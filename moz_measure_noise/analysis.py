@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Perftest Team (perftest@mozilla.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -20,10 +20,10 @@ from jx_bigquery import bigquery
 from jx_bigquery.expressions import BQLang
 from jx_bigquery.sql import quote_column, quote_value, sql_iso
 from jx_python import jx
-from measure_noise import deviance, step_detector
-from measure_noise.extract_perf import get_signature, get_dataum
-from measure_noise.step_detector import find_segments, MAX_POINTS, MIN_POINTS
-from measure_noise.utils import assign_colors, histogram
+from moz_measure_noise import deviance, step_detector
+from moz_measure_noise.extract_perf import get_signature, get_dataum
+from moz_measure_noise.step_detector import find_segments, MAX_POINTS, MIN_POINTS
+from moz_measure_noise.utils import assign_colors, histogram
 from mo_collections import left
 from mo_dots import Data, coalesce, unwrap, to_data, listwrap
 from mo_files import File
