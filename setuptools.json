@@ -1,16 +1,16 @@
 {
-    "author": "Kyle Lahnakoski",
-    "author_email": "kyle@lahnakoski.com",
+    "author": "Mozilla Perftest",
+    "author_email": "perftest@mozilla.com",
     "classifiers": [
         "Development Status :: 4 - Beta",
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"
     ],
-    "python_requires": ">=3.7",
+    "python_requires": ">=3.8",
     "description": "Measure deviant noise",
     "include_package_data": true,
-    "install_requires": ["numpy", "scipy"],
+    "install_requires": ["numpy>=1.23.1", "scipy"],
     "license": "MPL 2.0",
     "long_description": {
         "$concat": [
@@ -62,8 +62,8 @@
         "separator": "\n"
     },
     "long_description_content_type": "text/markdown",
-    "name": "measure-noise",
+    "name": "moz-measure-noise",
     "packages": ["measure_noise"],
     "url": "https://github.com/mozilla/measure-noise",
-    "version": "2.58.19240"
+    "version": "2.59.0.1"
 }

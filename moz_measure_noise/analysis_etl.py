@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Perftest Team (perftest@mozilla.com)
 #
 from __future__ import division
 from __future__ import unicode_literals
@@ -12,9 +12,9 @@ from __future__ import unicode_literals
 import numpy as np
 
 from jx_python import jx
-from measure_noise import deviance
-from measure_noise.extract_perf import get_signature, get_dataum
-from measure_noise.step_detector import find_segments
+from moz_measure_noise import deviance
+from moz_measure_noise.extract_perf import get_signature, get_dataum
+from moz_measure_noise.step_detector import find_segments
 from mo_dots import Data, unwrap
 from mo_json import NUMBER, python_type_to_json_type, scrub
 from mo_logs import Log
