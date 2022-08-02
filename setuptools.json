@@ -65,5 +65,5 @@
     "name": "moz-measure-noise",
     "packages": ["measure_noise"],
     "url": "https://github.com/mozilla/measure-noise",
-    "version": "2.59.0.1"
+    "version": "2.59.0.2"
 }
