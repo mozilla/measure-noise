@@ -10,7 +10,7 @@ setup(
     long_description_content_type=str(u'text/markdown'),
     include_package_data=True,
     classifiers=["Development Status :: 4 - Beta","Topic :: Software Development :: Libraries","Topic :: Software Development :: Libraries :: Python Modules","License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"],
-    install_requires=["numpy>=1.23.1","scipy"],
+    install_requires=["numpy>=1.23.1","scipy==1.8.1"],
     version=str(u'2.59.0.1'),
     url=str(u'https://github.com/mozilla/measure-noise'),
     packages=["moz_measure_noise"],
