@@ -10,7 +10,7 @@
     "python_requires": ">=3.8",
     "description": "Measure deviant noise",
     "include_package_data": true,
-    "install_requires": ["numpy>=1.23.1", "scipy"],
+    "install_requires": ["numpy>=1.23.1", "scipy==1.8.1"],
     "license": "MPL 2.0",
     "long_description": {
         "$concat": [
@@ -65,5 +65,5 @@
     "name": "moz-measure-noise",
     "packages": ["measure_noise"],
     "url": "https://github.com/mozilla/measure-noise",
-    "version": "2.59.0.1"
+    "version": "2.59.0.2"
 }

@@ -129,3 +129,54 @@ The `analysis.py` fills a local Sqlite database (as per the config file). It can
 ## Windows
 
 You must download the `scipy` and `numpy` binary packages. 
+
+## Branch Development and Updating
+
+You can merge your patches with PRs into the `dev` branch. Merges into master happen on any version updates (reflecting a new package in PyPi).
+
+To upload to PyPi you need to have access as a contributor to the `moz-measure-noise` package [found here](https://pypi.org/project/moz-measure-noise), as well as in the testpypi package [found here](https://test.pypi.org/project/moz-measure-noise/).
+
+If you want to upload a package to PyPi, first ensure the changes work locally using the Development instructions above. Increase the version number by adding a `.dev` to the end of the version. Next, ensure you have the `build`, and `twine` modules available:
+```
+python3 -m pip install build
+python3 -m pip install twine
+```
+
+Now build your packages:
+```
+python3 -m build
+```
+
+And upload to the test server:
+```
+twine upload -r testpypi dist/*
+```
+
+Then, you should be able to install it with the following in a virtualenv (the `--extra-index-url` is required to pull in requirements from the main pypi server):
+```
+python3.8 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple moz-measure-noise==2.59.0.1
+```
+
+Test the package and ensure your changes are working.
+
+To create a new package on the official page, increase the version number, commit it to the dev branch, and merge the dev branch into master:
+```
+# Increase version number in setup.py, and commit and push to dev
+...
+
+# Merge changes from dev
+git checkout master
+git merge dev
+git push origin master
+
+# Remove old/possibly bad archives
+rm -rf build/*
+rm -rf dist/*
+
+# Build and upload
+python3 -m build
+twine upload dist/*
+```
+
+Then you'll be able to install your newest package with: `python3.8 -m pip install moz-measure-noise`
+
