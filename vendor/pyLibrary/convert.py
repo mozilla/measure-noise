@@ -167,7 +167,7 @@ def list2tab(rows, separator="\t"):
     columns = set()
     for r in listwrap(rows):
         columns |= set(k for k, v in r.leaves())
-    keys = list(columns)
+    keys = list(sorted(columns))
 
     output = []
     for r in to_data(rows):

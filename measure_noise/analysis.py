@@ -339,6 +339,20 @@ def show_sorted(
         )
 
 
+def enrich_download_docs(docs):
+    template_url = (
+        'https://treeherder.mozilla.org/perf.html#/graphs'
+        '?series={0[repository]},{0[id]},1,{0[framework_id]}'
+        '&timerange=31536000'
+    )
+
+    def enrich(doc):
+        doc['perfherder_link'] = template_url.format(doc)
+        return doc
+
+    return [enrich(doc) for doc in docs]
+
+
 def main():
     since = Date.today() - Duration(SCATTER_RANGE)
 
@@ -389,8 +403,10 @@ def main():
             """
             )
         )
+        Log.note("Downloaded {{num}} series", num=len(docs))
         if len(docs) == DOWNLOAD_LIMIT:
             Log.warning("Not all signatures downloaded")
+        docs = enrich_download_docs(docs)
         File(config.args.download).write(list2tab(docs, separator=","))
 
     # DEVIANT
