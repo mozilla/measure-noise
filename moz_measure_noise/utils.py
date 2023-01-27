@@ -11,18 +11,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 import numpy as np
 
-from mo_dots import Null
-from mo_math import mod
-
-go = Null
-
-
-def _late_import():
-    global go
-    import plotly.graph_objects as go
-
-    _ = go
-
 
 def get_range(value):
     """
@@ -49,14 +37,12 @@ def get_range(value):
 
 
 def histogram(values, title=None):
-    _late_import()
     fig = go.Figure(go.Histogram(x=list(values)))
     fig.update_layout(title=title)
     fig.show()
 
 
 def plot(data, title=None):
-    _late_import()
 
     fig = go.Figure(
         data=go.Scatter(
@@ -71,7 +57,6 @@ def plot(data, title=None):
 
 
 def assign_colors(values, segments, title):
-    _late_import()
     next_color = 0
     colors = ["gray"] * len(values)
 
