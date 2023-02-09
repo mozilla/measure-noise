@@ -10,12 +10,12 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import numpy as np
+import traceback
+
 from numpy.lib.stride_tricks import as_strided
 from scipy.stats import stats, rankdata
 
 from moz_measure_noise.utils import plot
-from mo_dots import Data, coalesce
-from mo_logs import Except
 
 SHOW_CHARTS = False
 
@@ -39,6 +39,23 @@ PERFHERDER_THRESHOLD_TYPE_ABS = 1
 DEFAULT_THRESHOLD = 0.03
 
 
+class Data:
+    # Replacement for mo_dots.Data
+    # Use like Data(pvalue=0.2, mvalue=0, othervalue=2)
+    def __init__(self, **kwargs):
+        for kwarg in kwargs:
+            setattr(self, kwarg, kwargs[kwarg])
+
+
+def coalesce(*args):
+    # Replacement for mo_dots.coalesce
+    # Expecting a default as the last element
+    for arg in args:
+        if arg is not None:
+            return arg
+    return arg
+
+
 def find_segments(values, diff_type, diff_threshold):
     values = list(values)
     if len(values) == 0:
@@ -54,7 +71,7 @@ def find_segments(values, diff_type, diff_threshold):
     mwus = sliding_MWU(values)
     edge_detection = -np.log10(mwus[:, 1])
     # edge_detection = np.convolve(percentiles, edge_wavelet, mode="valid")
-    SHOW_CHARTS and plot(edge_detection, title="EDGES -log10(p_value)")
+
     top_edges = np.argsort(-edge_detection)
     top_edges = filter_nearby_edges(top_edges[edge_detection[top_edges] > THRESHOLD / 3])
 
@@ -175,7 +192,7 @@ def jitter_MWU(values, start, mid, end):
         )
 
     except Exception as e:
-        e = Except.wrap(e)
+        e = traceback.format_exc()
         if "All numbers are identical" in e:
             return no_good_edge, no_good_edge, mids[0]
         raise e
@@ -237,7 +254,7 @@ def sliding_MWU(values):
 
         return m_score
     except Exception as cause:
-        cause = Except.wrap(cause)
+        cause = traceback.format_exc()
         if "All numbers are identical" in cause:
             return np.ones((window.shape[0], 2))
         raise cause
