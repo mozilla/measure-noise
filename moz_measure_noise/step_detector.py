@@ -15,10 +15,6 @@ import traceback
 from numpy.lib.stride_tricks import as_strided
 from scipy.stats import stats, rankdata
 
-from moz_measure_noise.utils import plot
-
-SHOW_CHARTS = False
-
 
 THRESHOLD = 4
 P_THRESHOLD = pow(10, -THRESHOLD)
@@ -32,8 +28,6 @@ weight_length = 30
 forward = np.exp(-np.arange(weight_length) / weight_scale) / weight_scale
 median_weight = np.array(list(forward[::-1]) + list(forward))
 weight_radius = len(median_weight) // 2
-
-SHOW_CHARTS and plot(median_weight, title="WEIGHT")
 
 PERFHERDER_THRESHOLD_TYPE_ABS = 1
 DEFAULT_THRESHOLD = 0.03
@@ -67,7 +61,6 @@ def find_segments(values, diff_type, diff_threshold):
         logs = np.log(values)
     ranks = rankdata(values)
 
-    SHOW_CHARTS and plot(ranks/len(values), title="RANKS")
     mwus = sliding_MWU(values)
     edge_detection = -np.log10(mwus[:, 1])
     # edge_detection = np.convolve(percentiles, edge_wavelet, mode="valid")
